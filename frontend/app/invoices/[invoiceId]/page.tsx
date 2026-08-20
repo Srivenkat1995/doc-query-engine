@@ -6,11 +6,36 @@ import { useParams } from "next/navigation";
 
 import {
   getExtraction,
+  type CitationResponse,
   type ExtractedFieldResponse,
   type ExtractionResponse,
 } from "../../../lib/api";
 
-function FieldCard({ field }: { field: ExtractedFieldResponse }) {
+function CitationButton({
+  citation,
+  onSelect,
+}: {
+  citation: CitationResponse;
+  onSelect: (citation: CitationResponse) => void;
+}) {
+  return (
+    <button
+      className="mt-3 block w-full border-t border-slate-200 pt-3 text-left text-sm text-blue-700 hover:text-blue-900"
+      onClick={() => onSelect(citation)}
+      type="button"
+    >
+      Verify source · page {citation.page}: “{citation.source_text}”
+    </button>
+  );
+}
+
+function FieldCard({
+  field,
+  onSelectCitation,
+}: {
+  field: ExtractedFieldResponse;
+  onSelectCitation: (citation: CitationResponse) => void;
+}) {
   return (
     <article
       className={`rounded-xl border p-4 ${
@@ -36,15 +61,71 @@ function FieldCard({ field }: { field: ExtractedFieldResponse }) {
         </p>
       )}
       {field.citation && (
-        <p className="mt-3 border-t border-slate-200 pt-3 text-sm text-slate-600">
-          Page {field.citation.page}: “{field.citation.source_text}”
-        </p>
+        <CitationButton citation={field.citation} onSelect={onSelectCitation} />
       )}
     </article>
   );
 }
 
+function SourcePanel({
+  rawText,
+  selectedCitation,
+}: {
+  rawText: string;
+  selectedCitation: CitationResponse | null;
+}) {
+  if (!selectedCitation) {
+    return (
+      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-slate-950">Source verification</h2>
+        <p className="mt-2 text-slate-600">
+          Select “Verify source” on a field or line item to focus its supporting text.
+        </p>
+      </section>
+    );
+  }
+
+  const matchStart = rawText.indexOf(selectedCitation.source_text);
+  const hasMatch = matchStart >= 0;
+  const before = hasMatch ? rawText.slice(0, matchStart) : "";
+  const match = hasMatch ? selectedCitation.source_text : "";
+  const after = hasMatch
+    ? rawText.slice(matchStart + selectedCitation.source_text.length)
+    : rawText;
+  return (
+    <section className="mt-8 rounded-2xl border border-blue-200 bg-blue-50/40 p-6 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-700">
+            Citation selected
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">
+            Page {selectedCitation.page} source
+          </h2>
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">
+          Text fallback
+        </span>
+      </div>
+      <p className="mt-4 text-sm text-slate-600">
+        Coordinate data is not available for this fixture, so the matching source
+        text is highlighted instead of showing an absolute page overlay.
+      </p>
+      <pre className="mt-4 overflow-x-auto whitespace-pre-wrap rounded-xl border border-blue-200 bg-white p-4 text-sm leading-6 text-slate-700">
+        {before}
+        {match ? (
+          <mark className="rounded bg-amber-200 px-1 text-slate-950">{match}</mark>
+        ) : (
+          <span className="text-amber-800">Citation text was not found in the raw source.</span>
+        )}
+        {after}
+      </pre>
+    </section>
+  );
+}
+
 function ExtractionContent({ extraction }: { extraction: ExtractionResponse }) {
+  const [selectedCitation, setSelectedCitation] = useState<CitationResponse | null>(null);
   return (
     <>
       {extraction.issues.length > 0 && (
@@ -82,7 +163,11 @@ function ExtractionContent({ extraction }: { extraction: ExtractionResponse }) {
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {extraction.fields.map((field) => (
-            <FieldCard field={field} key={field.name} />
+            <FieldCard
+              field={field}
+              key={field.name}
+              onSelectCitation={setSelectedCitation}
+            />
           ))}
         </div>
       </section>
@@ -105,7 +190,18 @@ function ExtractionContent({ extraction }: { extraction: ExtractionResponse }) {
                   <td className="py-3 text-slate-900">{item.description}</td>
                   <td className="py-3 text-slate-600">{item.quantity}</td>
                   <td className="py-3 text-slate-600">{item.unit_price}</td>
-                  <td className="py-3 text-right font-medium text-slate-900">{item.amount}</td>
+                  <td className="py-3 text-right font-medium text-slate-900">
+                    {item.amount}
+                    {item.citation && (
+                      <button
+                        className="mt-1 block ml-auto text-xs font-medium text-blue-700 hover:text-blue-900"
+                        onClick={() => setSelectedCitation(item.citation)}
+                        type="button"
+                      >
+                        Verify source
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -113,6 +209,7 @@ function ExtractionContent({ extraction }: { extraction: ExtractionResponse }) {
         </div>
       </section>
 
+      <SourcePanel rawText={extraction.raw_text} selectedCitation={selectedCitation} />
       <details className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <summary className="cursor-pointer font-semibold text-slate-950">Source text</summary>
         <pre className="mt-4 overflow-x-auto whitespace-pre-wrap text-sm leading-6 text-slate-600">
