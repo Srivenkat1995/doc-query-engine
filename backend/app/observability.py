@@ -4,6 +4,7 @@ from time import perf_counter
 from typing import Any, Optional
 
 logger = logging.getLogger("doc_query_engine.http")
+worker_logger = logging.getLogger("doc_query_engine.worker")
 
 
 def log_request(
@@ -35,3 +36,22 @@ def request_timer() -> float:
     """Return a monotonic timestamp for request duration measurement."""
 
     return perf_counter()
+
+
+def log_worker_task(
+    *,
+    task_name: str,
+    trace_id: str,
+    invoice_id: str,
+    job_id: str,
+) -> None:
+    """Emit a JSON worker event with task correlation fields only."""
+
+    event = {
+        "event": "celery_task_received",
+        "task_name": task_name,
+        "trace_id": trace_id,
+        "invoice_id": invoice_id,
+        "job_id": job_id,
+    }
+    worker_logger.info(json.dumps(event, sort_keys=True))

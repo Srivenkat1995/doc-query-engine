@@ -1,6 +1,8 @@
 from celery import Celery
 
 from app.config import get_settings
+from app.observability import log_worker_task
+from app.task_context import TaskContext
 
 settings = get_settings()
 
@@ -21,7 +23,14 @@ celery_app.conf.update(
 
 
 @celery_app.task(name="app.worker.healthcheck")
-def healthcheck() -> str:
-    """Provide a no-op task for validating worker connectivity."""
+def healthcheck(payload: dict[str, str]) -> dict[str, str]:
+    """Validate task correlation data while checking worker connectivity."""
 
-    return "ok"
+    context = TaskContext.from_payload(payload)
+    log_worker_task(
+        task_name="app.worker.healthcheck",
+        trace_id=context.trace_id,
+        invoice_id=context.invoice_id,
+        job_id=context.job_id,
+    )
+    return {"status": "ok", **context.to_payload()}

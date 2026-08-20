@@ -29,6 +29,10 @@ The API emits JSON request events containing the event name, method, path, HTTP
 status, duration, and trace ID. Request bodies, query values, headers, file
 contents, credentials, and tokens are not included.
 
+Background task payloads carry `trace_id`, `invoice_id`, and `job_id`. The worker
+validates these fields and includes them in its JSON task event. Upload dispatch
+is introduced separately from this propagation contract.
+
 The connectivity-ready worker can be started with:
 
 ```text
