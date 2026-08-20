@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "Document Query Engine API"
     app_version: str = "0.1.0"
     environment: str = "development"
+    database_url: str = "sqlite:///./data/doc_query.db"
     redis_url: str = "redis://localhost:6379/0"
 
     model_config = SettingsConfigDict(

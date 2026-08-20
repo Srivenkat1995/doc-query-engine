@@ -27,6 +27,12 @@ The connectivity-ready worker can be started with:
 celery -A app.worker.celery_app worker --loglevel=INFO --queues=documents
 ```
 
+Apply database migrations with:
+
+```text
+alembic upgrade head
+```
+
 ## Verify the backend
 
 ```text

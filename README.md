@@ -50,6 +50,11 @@ data explicitly with `docker compose down -v`.
 The worker currently exposes a connectivity-ready Celery entrypoint. Invoice
 processing tasks are introduced in later implementation steps.
 
+The backend applies the Alembic migrations during container startup. The current
+persistence boundary supports creating and retrieving invoice metadata through
+the `POST /invoices` and `GET /invoices/{id}` endpoints. File upload and
+processing are added in later implementation steps.
+
 For backend-only or frontend-only setup, see [`backend/README.md`](./backend/README.md)
 and [`frontend/README.md`](./frontend/README.md).
 

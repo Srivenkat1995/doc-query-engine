@@ -29,6 +29,7 @@ services:
       context: ./backend
     environment:
       DOC_QUERY_ENVIRONMENT: docker
+      DOC_QUERY_DATABASE_URL: postgresql+psycopg://doc_query:doc_query_dev@postgres:5432/doc_query
       DOC_QUERY_REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
@@ -55,6 +56,7 @@ services:
     command: celery -A app.worker.celery_app worker --loglevel=INFO --queues=documents
     environment:
       DOC_QUERY_ENVIRONMENT: docker
+      DOC_QUERY_DATABASE_URL: postgresql+psycopg://doc_query:doc_query_dev@postgres:5432/doc_query
       DOC_QUERY_REDIS_URL: redis://redis:6379/0
     depends_on:
       backend:
@@ -87,7 +89,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
