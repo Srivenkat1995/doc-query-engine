@@ -53,6 +53,19 @@ processing tasks are introduced in later implementation steps.
 For backend-only or frontend-only setup, see [`backend/README.md`](./backend/README.md)
 and [`frontend/README.md`](./frontend/README.md).
 
+## Continuous integration
+
+GitHub Actions runs on pushes to `main` and on pull requests. It checks:
+
+- Backend dependency installation, Ruff, and Pytest.
+- Frontend `npm ci`, ESLint, and production build.
+- Docker Compose configuration validity.
+
+The current CI jobs do not start the full service stack because the existing
+backend tests do not require PostgreSQL or Redis. Integration tests will add
+those service dependencies when persistence and processing behavior are
+introduced.
+
 ## Decisions
 
 See [`decisions.md`](./decisions.md) for product framing, architectural
