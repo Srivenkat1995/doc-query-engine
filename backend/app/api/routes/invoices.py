@@ -5,12 +5,13 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Query,
     Request,
     Response,
     UploadFile,
     status,
 )
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -23,6 +24,7 @@ from app.models import (
     LineItemRecord,
     ProcessingJob,
 )
+from app.schemas.dashboard import DashboardResponse, InvoiceSummary
 from app.schemas.dispatch import DispatchResponse
 from app.schemas.extraction import (
     CitationResponse,
@@ -45,6 +47,51 @@ from app.upload_validation import (
 from app.worker import celery_app
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
+
+
+@router.get("", response_model=DashboardResponse)
+def list_invoices(
+    needs_review: bool = Query(default=False),
+    failed: bool = Query(default=False),
+    db: Session = Depends(get_db),
+) -> DashboardResponse:
+    invoices = db.scalars(select(Invoice).order_by(Invoice.created_at.desc())).all()
+    summaries = []
+    for invoice in invoices:
+        flags = db.scalar(
+            select(func.count(ExtractedFieldRecord.id)).where(
+                ExtractedFieldRecord.invoice_id == invoice.id,
+                ExtractedFieldRecord.needs_review.is_(True),
+            )
+        ) or 0
+        issue_count = db.scalar(
+            select(func.count(InvoiceIssue.id)).where(
+                InvoiceIssue.invoice_id == invoice.id
+            )
+        ) or 0
+        if needs_review and flags == 0 and issue_count == 0:
+            continue
+        if failed and invoice.status != "failed":
+            continue
+        summaries.append(
+            InvoiceSummary(
+                id=invoice.id,
+                original_filename=invoice.original_filename,
+                status=invoice.status,
+                size_bytes=invoice.size_bytes,
+                flag_count=flags,
+                issue_count=issue_count,
+                created_at=invoice.created_at,
+            )
+        )
+    return DashboardResponse(
+        invoices=summaries,
+        total_count=len(summaries),
+        needs_review_count=sum(
+            summary.flag_count > 0 or summary.issue_count > 0 for summary in summaries
+        ),
+        failed_count=sum(summary.status == "failed" for summary in summaries),
+    )
 
 
 @router.post("", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)

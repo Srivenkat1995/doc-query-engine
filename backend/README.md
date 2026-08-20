@@ -88,6 +88,10 @@ Citation records are stored separately with invoice ID, entity type, entity ID,
 page, source text, and optional bounding-box coordinates. This keeps provenance
 queryable independently from the extracted value tables.
 
+`GET /invoices` returns the invoice batch summary. Use `needs_review=true` to
+prioritize invoices with field flags or review issues, and `failed=true` to show
+processing failures.
+
 `DeterministicExtractionProvider` parses the line-oriented fixtures in
 `tests/fixtures/` without external credentials. It supports clean and deliberately
 messy examples, including low-confidence fields and unreconciled printed totals.

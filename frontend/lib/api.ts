@@ -77,6 +77,23 @@ export type ExtractionResponse = {
   issues: IssueResponse[];
 };
 
+export type InvoiceSummary = {
+  id: string;
+  original_filename: string;
+  status: string;
+  size_bytes: number;
+  flag_count: number;
+  issue_count: number;
+  created_at: string;
+};
+
+export type DashboardResponse = {
+  invoices: InvoiceSummary[];
+  total_count: number;
+  needs_review_count: number;
+  failed_count: number;
+};
+
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 export const SUPPORTED_UPLOAD_TYPES = [
   "application/pdf",
@@ -167,4 +184,15 @@ export async function getExtraction(invoiceId: string): Promise<ExtractionRespon
   });
   if (!response.ok) throw await parseError(response, "The extraction could not be read.");
   return response.json() as Promise<ExtractionResponse>;
+}
+
+export async function getDashboard(
+  needsReview = false,
+): Promise<DashboardResponse> {
+  const query = needsReview ? "?needs_review=true" : "";
+  const response = await fetch(`${apiBaseUrl}/invoices${query}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) throw await parseError(response, "The invoice list could not be read.");
+  return response.json() as Promise<DashboardResponse>;
 }

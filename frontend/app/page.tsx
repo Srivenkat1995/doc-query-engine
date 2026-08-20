@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { getHealth, type HealthResponse } from "../lib/api";
 import { UploadForm } from "../components/upload-form";
+import { InvoiceDashboard } from "../components/invoice-dashboard";
 
 export default function HomePage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -91,6 +92,7 @@ export default function HomePage() {
         <div className="mt-8">
           <UploadForm />
         </div>
+        <InvoiceDashboard />
       </div>
     </main>
   );
