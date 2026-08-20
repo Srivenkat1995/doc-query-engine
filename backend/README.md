@@ -63,6 +63,11 @@ reason. Extraction is introduced separately.
 job status, attempt count, failure reason, and timestamps. It verifies that the
 job belongs to the requested invoice.
 
+The extraction boundary is defined by `ExtractionProvider`. Providers return
+structured fields, line items, raw source text, confidence values, and citations.
+The worker does not depend on a specific OCR or model provider; the deterministic
+implementation is introduced separately.
+
 The connectivity-ready worker can be started with:
 
 ```text
