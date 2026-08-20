@@ -1,12 +1,12 @@
 # Document Parsing & Query Engine
 
-> Turning messy invoices into structured, queryable data with spatial visual grounding.
+> Turn messy invoices into structured, queryable data with source-grounded review.
 
-This project helps AP and finance operations reviewers find invoice exceptions
-quickly and verify extracted values against the original document before acting
-on them.
+This application helps AP and finance operations reviewers find invoice
+exceptions before approving payments. It preserves extracted values, confidence,
+review reasons, and source references used to verify them.
 
-## Planned stack
+## Stack
 
 - **Frontend:** Next.js, React, and Tailwind
 - **Backend:** Python, FastAPI, and Pydantic
@@ -14,64 +14,94 @@ on them.
 - **Processing:** Celery and Redis
 - **Local environment:** Docker Compose
 
-## Core workflow
+## Current capabilities
 
-1. Upload a PDF, JPEG, or PNG invoice up to 5MB.
-2. Process it asynchronously into structured invoice fields.
-3. Flag low-confidence values and totals that do not reconcile with line items.
-4. Review each flagged value against its source citation.
-5. Search invoices using structured filters and semantic similarity.
-
-The system is designed to surface uncertainty rather than silently correct
-financial data.
+- Upload PDF, JPEG, and PNG invoices up to 5MB.
+- Store invoice metadata in PostgreSQL.
+- Process jobs asynchronously through Celery and Redis.
+- Extract deterministic fixture invoices into fields and line items.
+- Persist raw text, confidence signals, citations, issues, and search chunks.
+- Generate local `all-MiniLM-L6-v2` embeddings in PostgreSQL `pgvector`.
+- Flag low-confidence fields without discarding valid fields.
+- Flag total/line-item mismatches without changing either total.
+- Recover from malformed extraction with one repair attempt and review fallback.
+- Search using structured filters, semantic ranking, or both.
+- Review fields, issues, citations, and source-text highlights in the UI.
+- Track requests and worker tasks with correlation IDs.
 
 ## Local setup
 
-Install Docker Desktop with the Compose plugin, then start the complete local
-stack from the repository root:
+Install Docker Desktop, then start the stack from the repository root:
 
 ```text
-docker compose up --build
+docker-compose up --build
 ```
 
 Services:
 
 - Frontend: `http://localhost:3000`
 - Backend health: `http://localhost:8000/health`
-- PostgreSQL with `pgvector`: internal service on port `5432`
-- Redis: internal service on port `6379`
+- PostgreSQL + `pgvector`: internal port `5432`
+- Redis: internal port `6379`
 - Celery worker: internal background service
 
-The default development database values are defined in `docker-compose.yml` and
-can be overridden with a root `.env` file. The database and Redis data persist
-in named Docker volumes. Stop the stack with `docker compose down`; remove local
-data explicitly with `docker compose down -v`.
+The backend applies Alembic migrations during startup. PostgreSQL, Redis, and
+uploaded files use named Docker volumes. Stop services with
+`docker-compose down`; remove local data with `docker-compose down -v`.
 
-The worker currently exposes a connectivity-ready Celery entrypoint. Invoice
-processing tasks are introduced in later implementation steps.
+For service-specific setup, see [`backend/README.md`](./backend/README.md) and
+[`frontend/README.md`](./frontend/README.md).
 
-The backend applies the Alembic migrations during container startup. The current
-persistence boundary supports creating and retrieving invoice metadata through
-the `POST /invoices` and `GET /invoices/{id}` endpoints. File upload and
-processing are added in later implementation steps.
+## Representative workflow
 
-For backend-only or frontend-only setup, see [`backend/README.md`](./backend/README.md)
-and [`frontend/README.md`](./frontend/README.md).
+1. Choose an invoice in the frontend.
+2. Client-side validation checks type and size before upload.
+3. The API stores the file and creates an idempotent processing job.
+4. The worker extracts fields, citations, and chunks in one transaction.
+5. The UI polls status and links to the invoice review page.
+6. Review flagged fields, arithmetic issues, and source citations before acting.
 
-## Continuous integration
+## Search examples
 
-GitHub Actions runs on pushes to `main` and on pull requests. It checks:
+```text
+GET /invoices?vendor=Acme&total_min=1000&status=ready
+GET /invoices/search/semantic?q=consulting%20services&limit=10
+GET /invoices/search/hybrid?q=payment%20terms&vendor=Acme&total_min=1000
+```
 
-- Backend dependency installation, Ruff, and Pytest.
-- Frontend `npm ci`, ESLint, and production build.
-- Docker Compose configuration validity.
+## Development checks
 
-The current CI jobs do not start the full service stack because the existing
-backend tests do not require PostgreSQL or Redis. Integration tests will add
-those service dependencies when persistence and processing behavior are
-introduced.
+Backend:
 
-## Decisions
+```text
+cd backend
+python -m pytest
+python -m ruff check .
+```
 
-See [`decisions.md`](./decisions.md) for product framing, architectural
+Frontend:
+
+```text
+cd frontend
+npm ci
+npm run lint
+npm run build
+```
+
+GitHub Actions runs these checks and validates Compose configuration on pushes
+to `main` and pull requests.
+
+## Deliberate limitations
+
+- The deterministic provider supports documented line-oriented fixtures; it is
+  not an arbitrary-document OCR accuracy claim.
+- Source-text highlighting is used when reliable PDF coordinate alignment is
+  unavailable.
+- Authentication, multi-tenancy, approvals, payments, ERP integration,
+  handwriting, non-English invoices, fraud detection, and production virus
+  scanning are not implemented.
+
+## Decision record
+
+See [`decisions.md`](./decisions.md) for product framing, alternatives,
 trade-offs, reliability decisions, and deliberately excluded scope.

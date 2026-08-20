@@ -24,6 +24,10 @@ The frontend checks `/api/health` by default. Next.js proxies that request to
 `NEXT_PUBLIC_API_BASE_URL` only when the browser must call a different
 same-origin API path directly.
 
+The home page provides upload, processing-status, exception-dashboard, and
+review navigation. Review pages show extracted fields, issues, line items,
+citations, and source-text fallback highlighting.
+
 ## Verify the frontend
 
 ```text

@@ -98,8 +98,7 @@ the set rather than duplicating it. Vector generation is introduced separately.
 
 Search chunks now receive normalized 384-dimensional embeddings from the local
 `all-MiniLM-L6-v2` model. The Docker image downloads the model during build into
-the Hugging Face cache, so worker tasks do not download it on first use. Query
-ranking is introduced separately.
+the Hugging Face cache, so worker tasks do not download it on first use.
 
 `GET /invoices` returns the invoice batch summary. Use `needs_review=true` to
 prioritize invoices with field flags or review issues, and `failed=true` to show
@@ -147,3 +146,5 @@ Settings are loaded from environment variables with the `DOC_QUERY_` prefix.
 For example, `DOC_QUERY_ENVIRONMENT=test` sets the application environment.
 `DOC_QUERY_REDIS_URL` configures the Celery broker and result backend. A local
 `.env` file is supported and should not be committed.
+`DOC_QUERY_DATABASE_URL` configures SQLAlchemy and `DOC_QUERY_STORAGE_ROOT`
+configures local file storage.
