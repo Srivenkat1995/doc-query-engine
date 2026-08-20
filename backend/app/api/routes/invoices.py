@@ -5,6 +5,7 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Request,
     Response,
     UploadFile,
     status,
@@ -15,14 +16,18 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Invoice, ProcessingJob
+from app.schemas.dispatch import DispatchResponse
 from app.schemas.invoice import InvoiceCreate, InvoiceResponse
 from app.schemas.job import JobCreate, JobResponse
 from app.storage import Storage, get_storage
+from app.task_context import ProcessingTaskPayload, TaskContext
+from app.tracing import get_trace_id
 from app.upload_validation import (
     UploadValidationCode,
     UploadValidationError,
     validate_upload,
 )
+from app.worker import celery_app
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -143,6 +148,63 @@ def create_processing_job(
         return existing_job
     db.refresh(job)
     return job
+
+
+@router.post(
+    "/{invoice_id}/jobs/{job_id}/dispatch",
+    response_model=DispatchResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def dispatch_processing_job(
+    invoice_id: str,
+    job_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> DispatchResponse:
+    job = db.get(ProcessingJob, job_id)
+    invoice = db.get(Invoice, invoice_id)
+    if job is None or invoice is None or job.invoice_id != invoice_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Processing job not found",
+        )
+    if not invoice.storage_key:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "missing_storage_key",
+                "message": "Invoice has no stored file",
+            },
+        )
+
+    trace_id = get_trace_id(request)
+    payload = ProcessingTaskPayload(
+        context=TaskContext(
+            trace_id=trace_id,
+            invoice_id=invoice_id,
+            job_id=job_id,
+        ),
+        storage_key=invoice.storage_key,
+    )
+    try:
+        celery_app.send_task(
+            "app.worker.process_invoice",
+            args=[payload.to_payload()],
+            kwargs={},
+            task_id=job_id,
+            queue="documents",
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "queue_unavailable", "message": "Job queue is unavailable"},
+        ) from error
+    return DispatchResponse(
+        job_id=job_id,
+        invoice_id=invoice_id,
+        accepted=True,
+        trace_id=trace_id,
+    )
 
 
 @router.get("/{invoice_id}", response_model=InvoiceResponse)

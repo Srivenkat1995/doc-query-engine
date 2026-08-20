@@ -2,7 +2,7 @@ from celery import Celery
 
 from app.config import get_settings
 from app.observability import log_worker_task
-from app.task_context import TaskContext
+from app.task_context import ProcessingTaskPayload, TaskContext
 
 settings = get_settings()
 
@@ -34,3 +34,17 @@ def healthcheck(payload: dict[str, str]) -> dict[str, str]:
         job_id=context.job_id,
     )
     return {"status": "ok", **context.to_payload()}
+
+
+@celery_app.task(name="app.worker.process_invoice")
+def process_invoice(payload: dict[str, str]) -> dict[str, str]:
+    """Accept an invoice task; extraction is added in a later commit."""
+
+    task_payload = ProcessingTaskPayload.from_payload(payload)
+    log_worker_task(
+        task_name="app.worker.process_invoice",
+        trace_id=task_payload.context.trace_id,
+        invoice_id=task_payload.context.invoice_id,
+        job_id=task_payload.context.job_id,
+    )
+    return {"status": "accepted", **task_payload.to_payload()}

@@ -52,6 +52,11 @@ an `idempotency_key`. Repeating the same key for the same invoice returns the
 same job with HTTP 200; a new key returns HTTP 201. This commit creates the
 durable identity only—Celery dispatch is introduced separately.
 
+`POST /invoices/{invoice_id}/jobs/{job_id}/dispatch` sends the job to the
+`documents` Celery queue and returns HTTP 202 with the trace ID. Its payload
+contains the invoice ID, job ID, trace ID, and storage key. The worker accepts
+and logs the task; extraction is introduced separately.
+
 The connectivity-ready worker can be started with:
 
 ```text

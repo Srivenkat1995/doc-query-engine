@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from app.task_context import TaskContext
-from app.worker import healthcheck
+from app.task_context import ProcessingTaskPayload, TaskContext
+from app.worker import healthcheck, process_invoice
 
 
 def test_task_context_is_json_serializable() -> None:
@@ -52,3 +52,18 @@ def test_worker_receives_and_logs_task_context(
 def test_task_context_rejects_missing_correlation_fields() -> None:
     with pytest.raises(ValueError, match="Task context requires"):
         TaskContext.from_payload({"trace_id": "trace-123"})
+
+
+def test_processing_task_accepts_storage_key() -> None:
+    payload = ProcessingTaskPayload(
+        context=TaskContext(
+            trace_id="trace-123",
+            invoice_id="invoice-123",
+            job_id="job-123",
+        ),
+        storage_key="invoices/invoice-123",
+    )
+
+    result = process_invoice.run(payload.to_payload())
+
+    assert result == {"status": "accepted", **payload.to_payload()}
