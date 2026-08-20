@@ -6,11 +6,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.chunking import chunk_text
 from app.db import Base, get_db
 from app.deterministic_extraction import DeterministicExtractionProvider
 from app.extraction_persistence import persist_extraction
 from app.main import create_app
-from app.models import CitationRecord, Invoice, InvoiceStatus, JobStatus, ProcessingJob
+from app.models import (
+    CitationRecord,
+    Invoice,
+    InvoiceStatus,
+    JobStatus,
+    ProcessingJob,
+    SearchChunkRecord,
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "clean_invoice.txt"
 
@@ -60,6 +68,23 @@ def test_fixture_extraction_is_persisted_and_retrievable() -> None:
             "field",
             "line_item",
         }
+        chunks = (
+            session.query(SearchChunkRecord)
+            .filter_by(invoice_id=invoice_id)
+            .order_by(SearchChunkRecord.position)
+            .all()
+        )
+        assert len(chunks) == len(chunk_text(FIXTURE.read_text()))
+        assert chunks[0].content_hash
+
+        persist_extraction(session, invoice_id, job_id, extraction)
+        session.commit()
+        assert (
+            session.query(SearchChunkRecord)
+            .filter_by(invoice_id=invoice_id)
+            .count()
+            == len(chunk_text(FIXTURE.read_text()))
+        )
 
     def override_get_db() -> Generator[Session, None, None]:
         session = session_factory()

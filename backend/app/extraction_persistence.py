@@ -1,6 +1,7 @@
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
+from app.chunking import chunk_text
 from app.citation_persistence import replace_citations
 from app.extraction import InvoiceExtraction
 from app.models import (
@@ -12,6 +13,7 @@ from app.models import (
     JobStatus,
     LineItemRecord,
     ProcessingJob,
+    SearchChunkRecord,
 )
 
 
@@ -47,6 +49,9 @@ def persist_extraction(
         delete(ExtractionRecord).where(ExtractionRecord.invoice_id == invoice_id)
     )
     db.execute(delete(InvoiceIssue).where(InvoiceIssue.invoice_id == invoice_id))
+    db.execute(
+        delete(SearchChunkRecord).where(SearchChunkRecord.invoice_id == invoice_id)
+    )
 
     field_records = []
     for field in extraction.fields:
@@ -94,6 +99,15 @@ def persist_extraction(
         [record.id for record in line_item_records],
     )
     db.add(ExtractionRecord(invoice_id=invoice_id, raw_text=extraction.raw_text))
+    for chunk in chunk_text(extraction.raw_text):
+        db.add(
+            SearchChunkRecord(
+                invoice_id=invoice_id,
+                position=chunk.position,
+                content=chunk.content,
+                content_hash=chunk.content_hash,
+            )
+        )
     for issue in extraction.issues:
         db.add(
             InvoiceIssue(

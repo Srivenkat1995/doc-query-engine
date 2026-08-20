@@ -88,6 +88,10 @@ Citation records are stored separately with invoice ID, entity type, entity ID,
 page, source text, and optional bounding-box coordinates. This keeps provenance
 queryable independently from the extracted value tables.
 
+Raw extraction text is split into stable line-aware search chunks. Each chunk
+has an invoice-local position and SHA-256 content hash; reprocessing replaces
+the set rather than duplicating it. Vector generation is introduced separately.
+
 `GET /invoices` returns the invoice batch summary. Use `needs_review=true` to
 prioritize invoices with field flags or review issues, and `failed=true` to show
 processing failures.

@@ -180,3 +180,24 @@ class CitationRecord(Base):
     page: Mapped[int] = mapped_column(Integer, nullable=False)
     source_text: Mapped[str] = mapped_column(Text, nullable=False)
     bounding_box: Mapped[Optional[list[float]]] = mapped_column(JSON)
+
+
+class SearchChunkRecord(Base):
+    __tablename__ = "search_chunks"
+    __table_args__ = (
+        UniqueConstraint(
+            "invoice_id",
+            "position",
+            name="uq_search_chunks_invoice_position",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    invoice_id: Mapped[str] = mapped_column(
+        ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
