@@ -21,6 +21,10 @@ uvicorn app.main:app --reload
 
 The health endpoint is available at `http://localhost:8000/health`.
 
+Every request receives an `X-Trace-Id` response header. Clients may send a
+canonical UUID in the same header to preserve correlation across services;
+missing or invalid values are replaced with a generated UUID4.
+
 The connectivity-ready worker can be started with:
 
 ```text
