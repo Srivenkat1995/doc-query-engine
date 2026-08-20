@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Protocol, runtime_checkable
+
+from app.config import get_settings
 
 
 @runtime_checkable
@@ -59,3 +62,10 @@ class LocalStorage:
         except FileNotFoundError:
             return False
         return True
+
+
+@lru_cache
+def get_storage() -> LocalStorage:
+    """Return the process-local storage adapter for API dependencies."""
+
+    return LocalStorage(Path(get_settings().storage_root))

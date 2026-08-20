@@ -42,6 +42,11 @@ Upload validation accepts `application/pdf`, `image/jpeg`, and `image/png`.
 Empty files and files larger than 5MB are rejected before storage or database
 work begins. Validation errors expose stable codes for the API layer.
 
+`POST /invoices/upload` accepts a multipart field named `file`, stores the
+validated bytes through the storage adapter, and creates an invoice with
+`uploaded` status. It returns the invoice metadata after both writes succeed.
+Processing dispatch is intentionally not part of this endpoint yet.
+
 The connectivity-ready worker can be started with:
 
 ```text
