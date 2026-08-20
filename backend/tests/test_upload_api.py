@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base, get_db
 from app.main import create_app
 from app.storage import Storage, get_storage
+from app.upload_validation import MAX_UPLOAD_BYTES
 
 
 class MemoryStorage:
@@ -110,4 +111,75 @@ def test_upload_returns_storage_failure_without_invoice(
 
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "storage_unavailable"
+    assert storage.files == {}
+
+
+def test_upload_rejects_empty_file_without_storage_write(
+    upload_client: tuple[TestClient, MemoryStorage],
+) -> None:
+    client, storage = upload_client
+
+    response = client.post(
+        "/invoices/upload",
+        files={"file": ("empty.pdf", b"", "application/pdf")},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "empty_file"
+    assert storage.files == {}
+
+
+def test_upload_rejects_file_over_limit_without_storage_write(
+    upload_client: tuple[TestClient, MemoryStorage],
+) -> None:
+    client, storage = upload_client
+
+    response = client.post(
+        "/invoices/upload",
+        files={
+            "file": (
+                "large.pdf",
+                b"x" * (MAX_UPLOAD_BYTES + 1),
+                "application/pdf",
+            )
+        },
+    )
+
+    assert response.status_code == 413
+    assert response.json()["detail"]["code"] == "file_too_large"
+    assert storage.files == {}
+
+
+def test_upload_deletes_file_when_database_commit_fails(
+    upload_client: tuple[TestClient, MemoryStorage],
+) -> None:
+    client, storage = upload_client
+    app = client.app
+    original_get_db = app.dependency_overrides[get_db]
+
+    def failing_get_db() -> Generator[Session, None, None]:
+        db_generator = original_get_db()
+        session = next(db_generator)
+
+        def fail_commit() -> None:
+            raise RuntimeError("database unavailable")
+
+        session.commit = fail_commit  # type: ignore[method-assign]
+        try:
+            yield session
+        finally:
+            session.close()
+            db_generator.close()
+
+    app.dependency_overrides[get_db] = failing_get_db
+    try:
+        response = client.post(
+            "/invoices/upload",
+            files={"file": ("invoice.pdf", b"invoice bytes", "application/pdf")},
+        )
+    finally:
+        app.dependency_overrides[get_db] = original_get_db
+
+    assert response.status_code == 500
+    assert response.json()["detail"]["code"] == "persistence_failed"
     assert storage.files == {}

@@ -41,7 +41,7 @@ async def upload_invoice(
         validate_upload(content, mime_type)
     except UploadValidationError as error:
         response_status = (
-            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+            status.HTTP_413_CONTENT_TOO_LARGE
             if error.code == UploadValidationCode.FILE_TOO_LARGE
             else status.HTTP_400_BAD_REQUEST
         )
