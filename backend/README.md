@@ -109,6 +109,10 @@ database before any future semantic ranking.
 local model and ranks persisted chunks by pgvector cosine similarity. Results
 include invoice metadata, chunk content, and stable content hashes.
 
+`GET /invoices/search/hybrid` accepts the same query plus structured filters.
+The database narrows candidates using vendor, totals, dates, status, and review
+issues before vector similarity ranking. Results include citation record IDs.
+
 `DeterministicExtractionProvider` parses the line-oriented fixtures in
 `tests/fixtures/` without external credentials. It supports clean and deliberately
 messy examples, including low-confidence fields and unreconciled printed totals.

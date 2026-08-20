@@ -14,13 +14,14 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.embeddings import get_embedding_provider
 from app.models import (
+    CitationRecord,
     ExtractedFieldRecord,
     ExtractionRecord,
     Invoice,
@@ -86,6 +87,78 @@ def semantic_search(
         )
         for chunk, invoice, distance_value in rows
     ]
+    return SemanticSearchResponse(query=query_text, results=results)
+
+
+@router.get("/search/hybrid", response_model=SemanticSearchResponse)
+def hybrid_search(
+    q: str = Query(..., min_length=1, max_length=500),
+    vendor: Optional[str] = Query(default=None, min_length=1),
+    total_min: Optional[float] = Query(default=None, ge=0),
+    total_max: Optional[float] = Query(default=None, ge=0),
+    due_date_before: Optional[str] = Query(default=None),
+    due_date_after: Optional[str] = Query(default=None),
+    invoice_status: Optional[str] = Query(default=None, alias="status"),
+    needs_review: bool = Query(default=False),
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+) -> SemanticSearchResponse:
+    query_text = q.strip()
+    if not query_text:
+        raise HTTPException(status_code=400, detail="Search query cannot be blank")
+    query_vector = get_embedding_provider().embed([query_text])[0]
+    distance = SearchChunkRecord.embedding.cosine_distance(query_vector)
+    filters = []
+    if vendor:
+        filters.append(Invoice.vendor.ilike(f"%{vendor}%"))
+    if total_min is not None:
+        filters.append(Invoice.total >= total_min)
+    if total_max is not None:
+        filters.append(Invoice.total <= total_max)
+    if due_date_before:
+        filters.append(Invoice.due_date <= due_date_before)
+    if due_date_after:
+        filters.append(Invoice.due_date >= due_date_after)
+    if invoice_status:
+        filters.append(Invoice.status == invoice_status)
+    if needs_review:
+        filters.append(
+            exists(
+                select(ExtractedFieldRecord.id).where(
+                    ExtractedFieldRecord.invoice_id == Invoice.id,
+                    ExtractedFieldRecord.needs_review.is_(True),
+                )
+            )
+            | exists(
+                select(InvoiceIssue.id).where(InvoiceIssue.invoice_id == Invoice.id)
+            )
+        )
+    rows = db.execute(
+        select(SearchChunkRecord, Invoice, distance.label("distance"))
+        .join(Invoice, Invoice.id == SearchChunkRecord.invoice_id)
+        .where(SearchChunkRecord.embedding.is_not(None), *filters)
+        .order_by(distance)
+        .limit(limit)
+    ).all()
+    results = []
+    for chunk, invoice, distance_value in rows:
+        citation_ids = db.scalars(
+            select(CitationRecord.id).where(
+                CitationRecord.invoice_id == invoice.id
+            )
+        ).all()
+        results.append(
+            SearchResult(
+                invoice_id=invoice.id,
+                chunk_id=chunk.id,
+                content=chunk.content,
+                content_hash=chunk.content_hash,
+                score=round(1.0 - float(distance_value), 6),
+                vendor=invoice.vendor,
+                total=invoice.total,
+                citation_ids=citation_ids,
+            )
+        )
     return SemanticSearchResponse(query=query_text, results=results)
 
 
