@@ -79,9 +79,13 @@ def test_processing_task_accepts_storage_key(
     )
 
     monkeypatch.setattr("app.worker.mark_job_processing", lambda _: None)
+    monkeypatch.setattr(
+        "app.worker.execute_processing",
+        lambda task_payload: {"status": "completed", **task_payload.to_payload()},
+    )
     result = process_invoice.run(payload.to_payload())
 
-    assert result == {"status": "accepted", **payload.to_payload()}
+    assert result == {"status": "completed", **payload.to_payload()}
 
 
 def test_processing_task_has_bounded_retry_policy() -> None:

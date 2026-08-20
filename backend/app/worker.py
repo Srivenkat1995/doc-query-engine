@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import SessionLocal
+from app.deterministic_extraction import DeterministicExtractionProvider
+from app.extraction_persistence import persist_extraction
 from app.models import JobStatus, ProcessingJob
 from app.observability import log_worker_task
+from app.storage import get_storage
 from app.task_context import ProcessingTaskPayload, TaskContext
 
 settings = get_settings()
@@ -87,9 +90,25 @@ def mark_job_failed(job_id: str, reason: str, db: Optional[Session] = None) -> N
 
 
 def execute_processing(payload: ProcessingTaskPayload) -> dict[str, str]:
-    """Run the current processing step; extraction is added later."""
+    """Extract the stored document and commit its result with job completion."""
 
-    return {"status": "accepted", **payload.to_payload()}
+    db = SessionLocal()
+    try:
+        content = get_storage().get(payload.storage_key)
+        try:
+            extraction = DeterministicExtractionProvider().extract(content, "")
+        except (UnicodeDecodeError, ValueError) as error:
+            raise PermanentProcessingError(str(error)) from error
+        persist_extraction(
+            db,
+            payload.context.invoice_id,
+            payload.context.job_id,
+            extraction,
+        )
+        db.commit()
+        return {"status": "completed", **payload.to_payload()}
+    finally:
+        db.close()
 
 
 @celery_app.task(

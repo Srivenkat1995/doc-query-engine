@@ -15,8 +15,20 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Invoice, ProcessingJob
+from app.models import (
+    ExtractedFieldRecord,
+    ExtractionRecord,
+    Invoice,
+    LineItemRecord,
+    ProcessingJob,
+)
 from app.schemas.dispatch import DispatchResponse
+from app.schemas.extraction import (
+    CitationResponse,
+    ExtractedFieldResponse,
+    ExtractionResponse,
+    LineItemResponse,
+)
 from app.schemas.invoice import InvoiceCreate, InvoiceResponse
 from app.schemas.job import JobCreate, JobResponse
 from app.schemas.status import ProcessingStatusResponse
@@ -233,6 +245,62 @@ def get_processing_status(
         failure_reason=job.failure_reason,
         created_at=job.created_at,
         updated_at=job.updated_at,
+    )
+
+
+@router.get("/{invoice_id}/extraction", response_model=ExtractionResponse)
+def get_extraction(
+    invoice_id: str,
+    db: Session = Depends(get_db),
+) -> ExtractionResponse:
+    if db.get(Invoice, invoice_id) is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    extraction = db.get(ExtractionRecord, invoice_id)
+    if extraction is None:
+        raise HTTPException(status_code=404, detail="Extraction not found")
+
+    fields = db.scalars(
+        select(ExtractedFieldRecord)
+        .where(ExtractedFieldRecord.invoice_id == invoice_id)
+        .order_by(ExtractedFieldRecord.name)
+    ).all()
+    line_items = db.scalars(
+        select(LineItemRecord)
+        .where(LineItemRecord.invoice_id == invoice_id)
+        .order_by(LineItemRecord.position)
+    ).all()
+
+    def citation(record):
+        if record.citation_page is None or record.citation_text is None:
+            return None
+        return CitationResponse(
+            page=record.citation_page,
+            source_text=record.citation_text,
+            bounding_box=record.bounding_box,
+        )
+
+    return ExtractionResponse(
+        invoice_id=invoice_id,
+        fields=[
+            ExtractedFieldResponse(
+                name=field.name,
+                value=field.value,
+                confidence=field.confidence,
+                citation=citation(field),
+            )
+            for field in fields
+        ],
+        line_items=[
+            LineItemResponse(
+                description=item.description,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                amount=item.amount,
+                citation=citation(item),
+            )
+            for item in line_items
+        ],
+        raw_text=extraction.raw_text,
     )
 
 

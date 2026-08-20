@@ -68,6 +68,10 @@ structured fields, line items, raw source text, confidence values, and citations
 The worker does not depend on a specific OCR or model provider; the deterministic
 implementation is introduced separately.
 
+The deterministic provider now persists fields, line items, citations, and raw
+text in one extraction transaction with invoice `ready` and job `completed`
+state. Retrieve the result with `GET /invoices/{invoice_id}/extraction`.
+
 `DeterministicExtractionProvider` parses the line-oriented fixtures in
 `tests/fixtures/` without external credentials. It supports clean and deliberately
 messy examples, including low-confidence fields and unreconciled printed totals.
