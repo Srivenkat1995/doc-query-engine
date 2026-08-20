@@ -92,6 +92,11 @@ Raw extraction text is split into stable line-aware search chunks. Each chunk
 has an invoice-local position and SHA-256 content hash; reprocessing replaces
 the set rather than duplicating it. Vector generation is introduced separately.
 
+Search chunks now receive normalized 384-dimensional embeddings from the local
+`all-MiniLM-L6-v2` model. The Docker image downloads the model during build into
+the Hugging Face cache, so worker tasks do not download it on first use. Query
+ranking is introduced separately.
+
 `GET /invoices` returns the invoice batch summary. Use `needs_review=true` to
 prioritize invoices with field flags or review issues, and `failed=true` to show
 processing failures.

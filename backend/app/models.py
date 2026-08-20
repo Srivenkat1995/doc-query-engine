@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Optional
 from uuid import uuid4
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -201,3 +202,4 @@ class SearchChunkRecord(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    embedding: Mapped[Optional[list[float]]] = mapped_column(Vector(384))

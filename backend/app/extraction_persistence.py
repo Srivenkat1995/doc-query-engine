@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.chunking import chunk_text
 from app.citation_persistence import replace_citations
+from app.embeddings import get_embedding_provider
 from app.extraction import InvoiceExtraction
 from app.models import (
     ExtractedFieldRecord,
@@ -99,13 +100,16 @@ def persist_extraction(
         [record.id for record in line_item_records],
     )
     db.add(ExtractionRecord(invoice_id=invoice_id, raw_text=extraction.raw_text))
-    for chunk in chunk_text(extraction.raw_text):
+    chunks = chunk_text(extraction.raw_text)
+    vectors = get_embedding_provider().embed([chunk.content for chunk in chunks])
+    for chunk, vector in zip(chunks, vectors):
         db.add(
             SearchChunkRecord(
                 invoice_id=invoice_id,
                 position=chunk.position,
                 content=chunk.content,
                 content_hash=chunk.content_hash,
+                embedding=vector,
             )
         )
     for issue in extraction.issues:

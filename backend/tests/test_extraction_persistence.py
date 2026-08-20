@@ -23,7 +23,13 @@ from app.models import (
 FIXTURE = Path(__file__).parent / "fixtures" / "clean_invoice.txt"
 
 
-def test_fixture_extraction_is_persisted_and_retrievable() -> None:
+def test_fixture_extraction_is_persisted_and_retrievable(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.extraction_persistence.get_embedding_provider",
+        lambda: FakeEmbeddingProvider(),
+    )
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -109,3 +115,8 @@ def test_fixture_extraction_is_persisted_and_retrievable() -> None:
     assert body["fields"][0]["citation"]["page"] == 1
     assert len(body["line_items"]) == 2
     assert body["issues"] == []
+
+
+class FakeEmbeddingProvider:
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [[float(len(text)), 0.0] + [0.0] * 382 for text in texts]
