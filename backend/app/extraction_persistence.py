@@ -6,6 +6,7 @@ from app.models import (
     ExtractedFieldRecord,
     ExtractionRecord,
     Invoice,
+    InvoiceIssue,
     InvoiceStatus,
     JobStatus,
     LineItemRecord,
@@ -44,6 +45,7 @@ def persist_extraction(
     db.execute(
         delete(ExtractionRecord).where(ExtractionRecord.invoice_id == invoice_id)
     )
+    db.execute(delete(InvoiceIssue).where(InvoiceIssue.invoice_id == invoice_id))
 
     for field in extraction.fields:
         page, source_text, bounding_box = _citation_values(field.citation)
@@ -81,6 +83,15 @@ def persist_extraction(
             )
         )
     db.add(ExtractionRecord(invoice_id=invoice_id, raw_text=extraction.raw_text))
+    for issue in extraction.issues:
+        db.add(
+            InvoiceIssue(
+                invoice_id=invoice_id,
+                code=issue.code,
+                message=issue.message,
+                details=issue.details,
+            )
+        )
     invoice.status = InvoiceStatus.READY.value
     job.status = JobStatus.COMPLETED.value
     job.failure_reason = None

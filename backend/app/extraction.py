@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Protocol, Sequence, Tuple, runtime_checkable
 
 from app.confidence import ConfidenceSignals
@@ -38,12 +38,20 @@ class LineItem:
 
 
 @dataclass(frozen=True)
+class ExtractionIssue:
+    code: str
+    message: str
+    details: dict[str, str]
+
+
+@dataclass(frozen=True)
 class InvoiceExtraction:
     """Provider-neutral structured extraction result."""
 
     fields: Sequence[ExtractedField]
     line_items: Sequence[LineItem]
     raw_text: str
+    issues: Sequence[ExtractionIssue] = field(default_factory=tuple)
 
 
 @runtime_checkable

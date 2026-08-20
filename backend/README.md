@@ -76,6 +76,10 @@ Fields below the 0.75 final-confidence threshold are marked `needs_review` with
 the stable reason `low_confidence`; other valid fields continue through the
 pipeline. Arithmetic mismatch flags are introduced separately.
 
+Arithmetic reconciliation now creates a `total_mismatch` issue containing the
+printed total, calculated line-item total, and signed difference. Neither total
+is replaced. Issues are returned from the extraction endpoint for review.
+
 `DeterministicExtractionProvider` parses the line-oriented fixtures in
 `tests/fixtures/` without external credentials. It supports clean and deliberately
 messy examples, including low-confidence fields and unreconciled printed totals.

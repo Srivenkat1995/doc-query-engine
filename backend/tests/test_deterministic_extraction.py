@@ -46,6 +46,13 @@ def test_messy_fixture_preserves_low_confidence_and_total() -> None:
     due_date = next(field for field in result.fields if field.name == "due_date")
     assert due_date.needs_review is False
     assert total.value == "300.00"
+    assert len(result.issues) == 1
+    assert result.issues[0].code == "total_mismatch"
+    assert result.issues[0].details == {
+        "printed_total": "300.00",
+        "calculated_total": "250.00",
+        "difference": "50.00",
+    }
     assert result.raw_text.startswith("VENDOR: Acme Corporation")
 
 
@@ -56,6 +63,14 @@ def test_deterministic_provider_returns_same_result_for_same_fixture() -> None:
     assert provider.extract(content, "application/pdf") == provider.extract(
         content, "application/pdf"
     )
+
+
+def test_clean_fixture_has_no_reconciliation_issue() -> None:
+    result = DeterministicExtractionProvider().extract(
+        (FIXTURES / "clean_invoice.txt").read_bytes(), "application/pdf"
+    )
+
+    assert result.issues == []
 
 
 @pytest.mark.parametrize("content", [b"VENDOR: Acme", b"ITEM: Bad|format"])

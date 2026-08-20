@@ -9,6 +9,7 @@ from app.models import (  # noqa: F401
     ExtractedFieldRecord,
     ExtractionRecord,
     Invoice,
+    InvoiceIssue,
     LineItemRecord,
     ProcessingJob,
 )

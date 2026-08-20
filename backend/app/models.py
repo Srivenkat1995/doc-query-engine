@@ -150,3 +150,17 @@ class ExtractionRecord(Base):
         ForeignKey("invoices.id", ondelete="CASCADE"), primary_key=True
     )
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class InvoiceIssue(Base):
+    __tablename__ = "invoice_issues"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    invoice_id: Mapped[str] = mapped_column(
+        ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    code: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    details: Mapped[dict] = mapped_column(JSON, nullable=False)

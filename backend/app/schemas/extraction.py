@@ -4,6 +4,8 @@ from typing import List, Optional, Tuple
 
 from pydantic import BaseModel
 
+from app.schemas.issues import IssueResponse
+
 
 class CitationResponse(BaseModel):
     page: int
@@ -34,3 +36,4 @@ class ExtractionResponse(BaseModel):
     fields: List[ExtractedFieldResponse]
     line_items: List[LineItemResponse]
     raw_text: str
+    issues: List[IssueResponse]

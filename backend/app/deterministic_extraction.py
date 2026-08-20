@@ -4,7 +4,13 @@ from decimal import Decimal
 from typing import Dict, List
 
 from app.confidence import compose_confidence, confidence_review_reason
-from app.extraction import Citation, ExtractedField, InvoiceExtraction, LineItem
+from app.extraction import (
+    Citation,
+    ExtractedField,
+    ExtractionIssue,
+    InvoiceExtraction,
+    LineItem,
+)
 
 
 class DeterministicExtractionProvider:
@@ -59,6 +65,7 @@ class DeterministicExtractionProvider:
             )
 
         consistency_score = self._consistency_score(values["total"], line_items)
+        issues = self._reconciliation_issues(values["total"], line_items)
         fields = []
         for key, field_name in required_fields.items():
             signals = compose_confidence(
@@ -86,6 +93,7 @@ class DeterministicExtractionProvider:
             fields=fields,
             line_items=line_items,
             raw_text=raw_text,
+            issues=issues,
         )
 
     @staticmethod
@@ -106,3 +114,25 @@ class DeterministicExtractionProvider:
             return 1.0 if Decimal(total) == item_total else 0.5
         except Exception:
             return 0.0
+
+    @staticmethod
+    def _reconciliation_issues(
+        printed_total: str,
+        line_items: List[LineItem],
+    ) -> List[ExtractionIssue]:
+        calculated_total = sum(Decimal(item.amount) for item in line_items)
+        printed = Decimal(printed_total)
+        if printed == calculated_total:
+            return []
+        difference = printed - calculated_total
+        return [
+            ExtractionIssue(
+                code="total_mismatch",
+                message="Printed total does not match the line-item total",
+                details={
+                    "printed_total": str(printed),
+                    "calculated_total": str(calculated_total),
+                    "difference": str(difference),
+                },
+            )
+        ]

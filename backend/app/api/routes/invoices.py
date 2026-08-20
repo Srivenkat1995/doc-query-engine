@@ -19,6 +19,7 @@ from app.models import (
     ExtractedFieldRecord,
     ExtractionRecord,
     Invoice,
+    InvoiceIssue,
     LineItemRecord,
     ProcessingJob,
 )
@@ -30,6 +31,7 @@ from app.schemas.extraction import (
     LineItemResponse,
 )
 from app.schemas.invoice import InvoiceCreate, InvoiceResponse
+from app.schemas.issues import IssueResponse
 from app.schemas.job import JobCreate, JobResponse
 from app.schemas.status import ProcessingStatusResponse
 from app.storage import Storage, get_storage
@@ -269,6 +271,11 @@ def get_extraction(
         .where(LineItemRecord.invoice_id == invoice_id)
         .order_by(LineItemRecord.position)
     ).all()
+    issues = db.scalars(
+        select(InvoiceIssue)
+        .where(InvoiceIssue.invoice_id == invoice_id)
+        .order_by(InvoiceIssue.id)
+    ).all()
 
     def citation(record):
         if record.citation_page is None or record.citation_text is None:
@@ -304,6 +311,14 @@ def get_extraction(
             for item in line_items
         ],
         raw_text=extraction.raw_text,
+        issues=[
+            IssueResponse(
+                code=issue.code,
+                message=issue.message,
+                details=issue.details,
+            )
+            for issue in issues
+        ],
     )
 
 

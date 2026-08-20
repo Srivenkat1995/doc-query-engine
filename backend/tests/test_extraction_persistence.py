@@ -77,3 +77,4 @@ def test_fixture_extraction_is_persisted_and_retrievable() -> None:
     assert body["raw_text"].startswith("VENDOR: Acme Corporation")
     assert body["fields"][0]["citation"]["page"] == 1
     assert len(body["line_items"]) == 2
+    assert body["issues"] == []
