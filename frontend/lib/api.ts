@@ -39,6 +39,44 @@ export type ProcessingStatusResponse = {
   updated_at: string;
 };
 
+export type CitationResponse = {
+  page: number;
+  source_text: string;
+  bounding_box: [number, number, number, number] | null;
+};
+
+export type ExtractedFieldResponse = {
+  name: string;
+  value: string | null;
+  confidence: number;
+  confidence_signals: Record<string, number | boolean> | null;
+  needs_review: boolean;
+  review_reason: string | null;
+  citation: CitationResponse | null;
+};
+
+export type LineItemResponse = {
+  description: string;
+  quantity: string;
+  unit_price: string;
+  amount: string;
+  citation: CitationResponse | null;
+};
+
+export type IssueResponse = {
+  code: string;
+  message: string;
+  details: Record<string, string>;
+};
+
+export type ExtractionResponse = {
+  invoice_id: string;
+  fields: ExtractedFieldResponse[];
+  line_items: LineItemResponse[];
+  raw_text: string;
+  issues: IssueResponse[];
+};
+
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 export const SUPPORTED_UPLOAD_TYPES = [
   "application/pdf",
@@ -121,4 +159,12 @@ export async function getProcessingStatus(
   );
   if (!response.ok) throw await parseError(response, "The processing status could not be read.");
   return response.json() as Promise<ProcessingStatusResponse>;
+}
+
+export async function getExtraction(invoiceId: string): Promise<ExtractionResponse> {
+  const response = await fetch(`${apiBaseUrl}/invoices/${invoiceId}/extraction`, {
+    cache: "no-store",
+  });
+  if (!response.ok) throw await parseError(response, "The extraction could not be read.");
+  return response.json() as Promise<ExtractionResponse>;
 }
