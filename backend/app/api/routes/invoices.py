@@ -1,11 +1,22 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Response,
+    UploadFile,
+    status,
+)
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Invoice
+from app.models import Invoice, ProcessingJob
 from app.schemas.invoice import InvoiceCreate, InvoiceResponse
+from app.schemas.job import JobCreate, JobResponse
 from app.storage import Storage, get_storage
 from app.upload_validation import (
     UploadValidationCode,
@@ -85,6 +96,53 @@ async def upload_invoice(
             },
         ) from error
     return invoice
+
+
+@router.post(
+    "/{invoice_id}/jobs",
+    response_model=JobResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_processing_job(
+    invoice_id: str,
+    payload: JobCreate,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> ProcessingJob:
+    if db.get(Invoice, invoice_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice not found",
+        )
+
+    existing_job = db.scalar(
+        select(ProcessingJob).where(
+            ProcessingJob.invoice_id == invoice_id,
+            ProcessingJob.idempotency_key == payload.idempotency_key,
+        )
+    )
+    if existing_job is not None:
+        response.status_code = status.HTTP_200_OK
+        return existing_job
+
+    job = ProcessingJob(invoice_id=invoice_id, **payload.model_dump())
+    db.add(job)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing_job = db.scalar(
+            select(ProcessingJob).where(
+                ProcessingJob.invoice_id == invoice_id,
+                ProcessingJob.idempotency_key == payload.idempotency_key,
+            )
+        )
+        if existing_job is None:
+            raise
+        response.status_code = status.HTTP_200_OK
+        return existing_job
+    db.refresh(job)
+    return job
 
 
 @router.get("/{invoice_id}", response_model=InvoiceResponse)

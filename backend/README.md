@@ -47,6 +47,11 @@ validated bytes through the storage adapter, and creates an invoice with
 `uploaded` status. It returns the invoice metadata after both writes succeed.
 Processing dispatch is intentionally not part of this endpoint yet.
 
+`POST /invoices/{invoice_id}/jobs` creates a queued processing-job identity from
+an `idempotency_key`. Repeating the same key for the same invoice returns the
+same job with HTTP 200; a new key returns HTTP 201. This commit creates the
+durable identity only—Celery dispatch is introduced separately.
+
 The connectivity-ready worker can be started with:
 
 ```text
