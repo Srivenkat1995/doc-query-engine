@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
+CONFIDENCE_REVIEW_THRESHOLD = 0.75
+LOW_CONFIDENCE_REVIEW_REASON = "low_confidence"
 
 @dataclass(frozen=True)
 class ConfidenceSignals:
@@ -38,3 +40,11 @@ def compose_confidence(
         consistency_score=normalized_consistency,
         final_score=final_score,
     )
+
+
+def confidence_review_reason(signals: ConfidenceSignals) -> str | None:
+    """Return a review reason when final confidence is below the threshold."""
+
+    if signals.final_score < CONFIDENCE_REVIEW_THRESHOLD:
+        return LOW_CONFIDENCE_REVIEW_REASON
+    return None

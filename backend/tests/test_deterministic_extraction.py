@@ -41,6 +41,10 @@ def test_messy_fixture_preserves_low_confidence_and_total() -> None:
     assert vendor.confidence_signals.model_score == 0.62
     assert vendor.confidence_signals.format_valid is True
     assert vendor.confidence_signals.consistency_score == 0.5
+    assert vendor.needs_review is True
+    assert vendor.review_reason == "low_confidence"
+    due_date = next(field for field in result.fields if field.name == "due_date")
+    assert due_date.needs_review is False
     assert total.value == "300.00"
     assert result.raw_text.startswith("VENDOR: Acme Corporation")
 

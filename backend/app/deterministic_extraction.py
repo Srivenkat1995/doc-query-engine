@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Dict, List
 
-from app.confidence import compose_confidence
+from app.confidence import compose_confidence, confidence_review_reason
 from app.extraction import Citation, ExtractedField, InvoiceExtraction, LineItem
 
 
@@ -66,6 +66,7 @@ class DeterministicExtractionProvider:
                 format_valid=self._format_valid(key, values[key]),
                 consistency_score=consistency_score,
             )
+            review_reason = confidence_review_reason(signals)
             fields.append(
                 ExtractedField(
                     name=field_name,
@@ -76,6 +77,8 @@ class DeterministicExtractionProvider:
                         source_text=f"{key.upper()}: {values[key]}",
                     ),
                     confidence_signals=signals,
+                    needs_review=review_reason is not None,
+                    review_reason=review_reason,
                 )
             )
         Decimal(values["total"])  # Fail early on malformed money in a fixture.

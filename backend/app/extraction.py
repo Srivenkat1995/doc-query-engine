@@ -24,6 +24,8 @@ class ExtractedField:
     confidence: float
     citation: Optional[Citation] = None
     confidence_signals: Optional[ConfidenceSignals] = None
+    needs_review: bool = False
+    review_reason: Optional[str] = None
 
 
 @dataclass(frozen=True)

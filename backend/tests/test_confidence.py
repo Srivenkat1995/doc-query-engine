@@ -1,6 +1,11 @@
 import pytest
 
-from app.confidence import compose_confidence
+from app.confidence import (
+    CONFIDENCE_REVIEW_THRESHOLD,
+    LOW_CONFIDENCE_REVIEW_REASON,
+    compose_confidence,
+    confidence_review_reason,
+)
 
 
 @pytest.mark.parametrize(
@@ -40,3 +45,19 @@ def test_confidence_inputs_are_bounded() -> None:
     assert signals.model_score == 1.0
     assert signals.consistency_score == 0.0
     assert signals.final_score == 0.8
+
+
+def test_confidence_threshold_marks_only_low_scores() -> None:
+    low = compose_confidence(
+        0.2,
+        format_valid=True,
+        consistency_score=1.0,
+    )
+    high = compose_confidence(
+        CONFIDENCE_REVIEW_THRESHOLD,
+        format_valid=True,
+        consistency_score=1.0,
+    )
+
+    assert confidence_review_reason(low) == LOW_CONFIDENCE_REVIEW_REASON
+    assert confidence_review_reason(high) is None

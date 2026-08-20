@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -114,6 +115,10 @@ class ExtractedFieldRecord(Base):
     value: Mapped[Optional[str]] = mapped_column(Text)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     confidence_signals: Mapped[Optional[dict]] = mapped_column(JSON)
+    needs_review: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
+    )
+    review_reason: Mapped[Optional[str]] = mapped_column(String(64))
     citation_page: Mapped[Optional[int]] = mapped_column(Integer)
     citation_text: Mapped[Optional[str]] = mapped_column(Text)
     bounding_box: Mapped[Optional[list[float]]] = mapped_column(JSON)

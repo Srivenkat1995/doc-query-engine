@@ -72,6 +72,10 @@ The deterministic provider now persists fields, line items, citations, and raw
 text in one extraction transaction with invoice `ready` and job `completed`
 state. Retrieve the result with `GET /invoices/{invoice_id}/extraction`.
 
+Fields below the 0.75 final-confidence threshold are marked `needs_review` with
+the stable reason `low_confidence`; other valid fields continue through the
+pipeline. Arithmetic mismatch flags are introduced separately.
+
 `DeterministicExtractionProvider` parses the line-oriented fixtures in
 `tests/fixtures/` without external credentials. It supports clean and deliberately
 messy examples, including low-confidence fields and unreconciled printed totals.

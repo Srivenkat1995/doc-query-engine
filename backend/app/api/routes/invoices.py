@@ -287,6 +287,8 @@ def get_extraction(
                 value=field.value,
                 confidence=field.confidence,
                 confidence_signals=field.confidence_signals,
+                needs_review=field.needs_review,
+                review_reason=field.review_reason,
                 citation=citation(field),
             )
             for field in fields

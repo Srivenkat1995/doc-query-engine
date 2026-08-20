@@ -58,6 +58,8 @@ def persist_extraction(
                     if field.confidence_signals
                     else None
                 ),
+                needs_review=field.needs_review,
+                review_reason=field.review_reason,
                 citation_page=page,
                 citation_text=source_text,
                 bounding_box=bounding_box,
