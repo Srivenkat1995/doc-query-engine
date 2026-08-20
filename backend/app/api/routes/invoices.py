@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.embeddings import get_embedding_provider
 from app.models import (
     ExtractedFieldRecord,
     ExtractionRecord,
@@ -26,6 +27,7 @@ from app.models import (
     InvoiceIssue,
     LineItemRecord,
     ProcessingJob,
+    SearchChunkRecord,
 )
 from app.schemas.dashboard import DashboardResponse, InvoiceSummary
 from app.schemas.dispatch import DispatchResponse
@@ -38,6 +40,7 @@ from app.schemas.extraction import (
 from app.schemas.invoice import InvoiceCreate, InvoiceResponse
 from app.schemas.issues import IssueResponse
 from app.schemas.job import JobCreate, JobResponse
+from app.schemas.search import SearchResult, SemanticSearchResponse
 from app.schemas.status import ProcessingStatusResponse
 from app.storage import Storage, get_storage
 from app.task_context import ProcessingTaskPayload, TaskContext
@@ -50,6 +53,40 @@ from app.upload_validation import (
 from app.worker import celery_app
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
+
+
+@router.get("/search/semantic", response_model=SemanticSearchResponse)
+def semantic_search(
+    q: str = Query(..., min_length=1, max_length=500),
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+) -> SemanticSearchResponse:
+    query_text = q.strip()
+    if not query_text:
+        raise HTTPException(status_code=400, detail="Search query cannot be blank")
+    query_vector = get_embedding_provider().embed([query_text])[0]
+    distance = SearchChunkRecord.embedding.cosine_distance(query_vector)
+    rows = db.execute(
+        select(SearchChunkRecord, Invoice, distance.label("distance"))
+        .join(Invoice, Invoice.id == SearchChunkRecord.invoice_id)
+        .where(SearchChunkRecord.embedding.is_not(None))
+        .order_by(distance)
+        .limit(limit)
+    ).all()
+    results = [
+        SearchResult(
+            invoice_id=invoice.id,
+            chunk_id=chunk.id,
+            content=chunk.content,
+            content_hash=chunk.content_hash,
+            score=round(1.0 - float(distance_value), 6),
+            vendor=invoice.vendor,
+            total=invoice.total,
+            citation_ids=[],
+        )
+        for chunk, invoice, distance_value in rows
+    ]
+    return SemanticSearchResponse(query=query_text, results=results)
 
 
 @router.get("", response_model=DashboardResponse)

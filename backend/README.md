@@ -105,6 +105,10 @@ Structured filters include `vendor`, `total_min`, `total_max`,
 `due_date_before`, `due_date_after`, and `status`. These filters execute in the
 database before any future semantic ranking.
 
+`GET /invoices/search/semantic?q=consulting&limit=10` embeds the query with the
+local model and ranks persisted chunks by pgvector cosine similarity. Results
+include invoice metadata, chunk content, and stable content hashes.
+
 `DeterministicExtractionProvider` parses the line-oriented fixtures in
 `tests/fixtures/` without external credentials. It supports clean and deliberately
 messy examples, including low-confidence fields and unreconciled printed totals.
