@@ -166,3 +166,33 @@ def test_permanent_failure_does_not_retry(monkeypatch: pytest.MonkeyPatch) -> No
 
     assert result.failed()
     assert failures == ["permanent failure"]
+
+
+def test_missing_storage_file_becomes_terminal_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = ProcessingTaskPayload(
+        context=TaskContext(
+            trace_id="trace-123",
+            invoice_id="invoice-123",
+            job_id="job-123",
+        ),
+        storage_key="invoices/missing",
+    )
+    failures: list[str] = []
+    monkeypatch.setattr("app.worker.mark_job_processing", lambda _: None)
+    monkeypatch.setattr(
+        "app.worker.mark_job_failed",
+        lambda _job_id, reason: failures.append(reason),
+    )
+
+    class MissingStorage:
+        def get(self, _key: str) -> bytes:
+            raise FileNotFoundError("missing")
+
+    monkeypatch.setattr("app.worker.get_storage", lambda: MissingStorage())
+
+    result = process_invoice.apply(args=[payload.to_payload()], throw=False)
+
+    assert result.failed()
+    assert failures == ["Stored invoice file is missing"]

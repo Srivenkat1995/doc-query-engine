@@ -95,7 +95,12 @@ def execute_processing(payload: ProcessingTaskPayload) -> dict[str, str]:
 
     db = SessionLocal()
     try:
-        content = get_storage().get(payload.storage_key)
+        try:
+            content = get_storage().get(payload.storage_key)
+        except FileNotFoundError as error:
+            raise PermanentProcessingError(
+                "Stored invoice file is missing"
+            ) from error
         extraction = extract_with_one_repair(
             DeterministicExtractionProvider(),
             content,

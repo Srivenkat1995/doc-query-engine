@@ -84,6 +84,10 @@ Extraction failures receive exactly one optional repair attempt. If repair is
 unavailable or fails, raw source text is preserved, a `schema_repair_failed`
 issue is stored, and the invoice moves to `needs_review`.
 
+If a worker cannot find the stored source file, it records a terminal
+`Stored invoice file is missing` failure instead of retrying an unrecoverable
+condition indefinitely.
+
 Citation records are stored separately with invoice ID, entity type, entity ID,
 page, source text, and optional bounding-box coordinates. This keeps provenance
 queryable independently from the extracted value tables.
