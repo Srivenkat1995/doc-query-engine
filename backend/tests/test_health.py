@@ -43,6 +43,17 @@ def test_health_check_includes_configured_cors_origin(monkeypatch) -> None:
     assert response.headers["access-control-allow-origin"] == "https://review.example.com"
 
 
+def test_settings_sanitizes_cors_origin_list() -> None:
+    from app.config import Settings
+
+    settings = Settings(cors_origins="https://a.example.com, , https://b.example.com")
+
+    assert settings.cors_origins_list == [
+        "https://a.example.com",
+        "https://b.example.com",
+    ]
+
+
 def test_health_check_preserves_valid_trace_id() -> None:
     client = TestClient(create_app())
     trace_id = "12345678-1234-4234-8234-123456789abc"

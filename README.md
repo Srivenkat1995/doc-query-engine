@@ -108,6 +108,9 @@ Create a deployment environment file outside version control with these values:
 - `DOC_QUERY_CORS_ORIGINS` as a comma-separated list of trusted browser origins
 - Optional `PORT` for the published frontend port
 
+For local development, copy the backend template from [`backend/.env.example`](./backend/.env.example)
+and keep a production-safe `.env` file out of version control.
+
 Start it with the production Compose file and verify the frontend root and
 backend `/health` endpoint through the configured ingress. Never commit the
 environment file or place credentials in image layers. Uploaded files and

@@ -145,6 +145,9 @@ ruff check .
 Settings are loaded from environment variables with the `DOC_QUERY_` prefix.
 For example, `DOC_QUERY_ENVIRONMENT=test` sets the application environment.
 `DOC_QUERY_REDIS_URL` configures the Celery broker and result backend. A local
-`.env` file is supported and should not be committed.
-`DOC_QUERY_DATABASE_URL` configures SQLAlchemy and `DOC_QUERY_STORAGE_ROOT`
-configures local file storage.
+`.env` file is supported and should not be committed; use
+[`backend/.env.example`](./.env.example) as a template for required values.
+`DOC_QUERY_DATABASE_URL` configures SQLAlchemy, `DOC_QUERY_STORAGE_ROOT`
+configures local file storage, and `DOC_QUERY_CORS_ORIGINS` accepts a
+comma-separated list of allowed browser origins such as
+`https://review.example.com,https://admin.example.com`.
