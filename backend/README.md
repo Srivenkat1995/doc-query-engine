@@ -38,6 +38,10 @@ which defaults to `./uploads`. Writes are atomic, reads return bytes, deletes
 are idempotent, and absolute or path-traversal keys are rejected. The upload API
 will adopt this adapter in a later commit.
 
+Upload validation accepts `application/pdf`, `image/jpeg`, and `image/png`.
+Empty files and files larger than 5MB are rejected before storage or database
+work begins. Validation errors expose stable codes for the API layer.
+
 The connectivity-ready worker can be started with:
 
 ```text
