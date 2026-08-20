@@ -9,12 +9,13 @@ export function InvoiceDashboard() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [needsReview, setNeedsReview] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     getDashboard(needsReview).then(setDashboard).catch((requestError: unknown) => {
       setError(requestError instanceof Error ? requestError.message : "Unable to load invoices.");
     });
-  }, [needsReview]);
+  }, [needsReview, reloadKey]);
 
   return (
     <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -43,10 +44,34 @@ export function InvoiceDashboard() {
         </div>
       )}
 
-      {error && <p className="mt-6 text-sm text-rose-700" role="alert">{error}</p>}
+      {error && (
+        <div className="mt-6 flex items-center justify-between gap-4 rounded-xl bg-rose-50 p-4 text-sm text-rose-700" role="alert">
+          <span>{error}</span>
+          <button
+            className="shrink-0 font-semibold underline underline-offset-2"
+            onClick={() => {
+              setError(null);
+              setDashboard(null);
+              setReloadKey((key) => key + 1);
+            }}
+            type="button"
+          >
+            Retry
+          </button>
+        </div>
+      )}
       {!dashboard && !error && <p className="mt-6 text-sm text-slate-500" role="status">Loading invoice batch…</p>}
       {dashboard?.invoices.length === 0 && (
-        <p className="mt-6 rounded-xl bg-slate-50 p-5 text-sm text-slate-600">No invoices match this view.</p>
+        <div className="mt-6 rounded-xl bg-slate-50 p-5 text-sm text-slate-600">
+          <p className="font-medium text-slate-900">
+            {needsReview ? "No invoices need review." : "No invoices uploaded yet."}
+          </p>
+          <p className="mt-1">
+            {needsReview
+              ? "That is good news—your exception queue is clear."
+              : "Upload an invoice above to start building this batch."}
+          </p>
+        </div>
       )}
       {dashboard && dashboard.invoices.length > 0 && (
         <div className="mt-6 divide-y divide-slate-100 rounded-xl border border-slate-200">

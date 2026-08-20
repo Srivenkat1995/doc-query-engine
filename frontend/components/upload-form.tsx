@@ -134,9 +134,19 @@ export function UploadForm() {
           </p>
         )}
         {requestError && (
-          <p className="mt-3 text-sm text-rose-700" role="alert">
-            {requestError}
-          </p>
+          <div className="mt-3 flex items-center justify-between gap-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700" role="alert">
+            <span>{requestError}</span>
+            <button
+              className="shrink-0 font-semibold underline underline-offset-2"
+              onClick={() => {
+                setRequestError(null);
+                setProcessingMessage(null);
+              }}
+              type="button"
+            >
+              Try another file
+            </button>
+          </div>
         )}
         {uploadedInvoice && processingMessage && (
           <p className="mt-3 text-sm text-emerald-700" role="status">
