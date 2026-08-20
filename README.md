@@ -25,10 +25,33 @@ on them.
 The system is designed to surface uncertainty rather than silently correct
 financial data.
 
-## Setup
+## Local setup
 
-Implementation is in progress. The completed project will provide a Docker
-Compose development stack, test instructions, and deployment instructions here.
+Install Docker Desktop with the Compose plugin, then start the complete local
+stack from the repository root:
+
+```text
+docker compose up --build
+```
+
+Services:
+
+- Frontend: `http://localhost:3000`
+- Backend health: `http://localhost:8000/health`
+- PostgreSQL with `pgvector`: internal service on port `5432`
+- Redis: internal service on port `6379`
+- Celery worker: internal background service
+
+The default development database values are defined in `docker-compose.yml` and
+can be overridden with a root `.env` file. The database and Redis data persist
+in named Docker volumes. Stop the stack with `docker compose down`; remove local
+data explicitly with `docker compose down -v`.
+
+The worker currently exposes a connectivity-ready Celery entrypoint. Invoice
+processing tasks are introduced in later implementation steps.
+
+For backend-only or frontend-only setup, see [`backend/README.md`](./backend/README.md)
+and [`frontend/README.md`](./frontend/README.md).
 
 ## Decisions
 

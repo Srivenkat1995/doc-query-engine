@@ -21,6 +21,12 @@ uvicorn app.main:app --reload
 
 The health endpoint is available at `http://localhost:8000/health`.
 
+The connectivity-ready worker can be started with:
+
+```text
+celery -A app.worker.celery_app worker --loglevel=INFO --queues=documents
+```
+
 ## Verify the backend
 
 ```text
@@ -32,4 +38,5 @@ ruff check .
 
 Settings are loaded from environment variables with the `DOC_QUERY_` prefix.
 For example, `DOC_QUERY_ENVIRONMENT=test` sets the application environment.
-A local `.env` file is supported and should not be committed.
+`DOC_QUERY_REDIS_URL` configures the Celery broker and result backend. A local
+`.env` file is supported and should not be committed.
