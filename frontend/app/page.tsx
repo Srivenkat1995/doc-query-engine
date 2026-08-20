@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { getHealth, type HealthResponse } from "../lib/api";
+import { UploadForm } from "../components/upload-form";
 
 export default function HomePage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -86,6 +87,10 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        <div className="mt-8">
+          <UploadForm />
+        </div>
       </div>
     </main>
   );
