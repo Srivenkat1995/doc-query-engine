@@ -1,6 +1,7 @@
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
+from app.citation_persistence import replace_citations
 from app.extraction import InvoiceExtraction
 from app.models import (
     ExtractedFieldRecord,
@@ -47,10 +48,10 @@ def persist_extraction(
     )
     db.execute(delete(InvoiceIssue).where(InvoiceIssue.invoice_id == invoice_id))
 
+    field_records = []
     for field in extraction.fields:
         page, source_text, bounding_box = _citation_values(field.citation)
-        db.add(
-            ExtractedFieldRecord(
+        record = ExtractedFieldRecord(
                 invoice_id=invoice_id,
                 name=field.name,
                 value=field.value,
@@ -66,11 +67,12 @@ def persist_extraction(
                 citation_text=source_text,
                 bounding_box=bounding_box,
             )
-        )
+        field_records.append(record)
+        db.add(record)
+    line_item_records = []
     for position, item in enumerate(extraction.line_items):
         page, source_text, bounding_box = _citation_values(item.citation)
-        db.add(
-            LineItemRecord(
+        record = LineItemRecord(
                 invoice_id=invoice_id,
                 position=position,
                 description=item.description,
@@ -81,7 +83,16 @@ def persist_extraction(
                 citation_text=source_text,
                 bounding_box=bounding_box,
             )
-        )
+        line_item_records.append(record)
+        db.add(record)
+    db.flush()
+    replace_citations(
+        db,
+        invoice_id,
+        extraction,
+        [record.id for record in field_records],
+        [record.id for record in line_item_records],
+    )
     db.add(ExtractionRecord(invoice_id=invoice_id, raw_text=extraction.raw_text))
     for issue in extraction.issues:
         db.add(

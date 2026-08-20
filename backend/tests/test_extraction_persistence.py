@@ -10,7 +10,7 @@ from app.db import Base, get_db
 from app.deterministic_extraction import DeterministicExtractionProvider
 from app.extraction_persistence import persist_extraction
 from app.main import create_app
-from app.models import Invoice, InvoiceStatus, JobStatus, ProcessingJob
+from app.models import CitationRecord, Invoice, InvoiceStatus, JobStatus, ProcessingJob
 
 FIXTURE = Path(__file__).parent / "fixtures" / "clean_invoice.txt"
 
@@ -54,6 +54,12 @@ def test_fixture_extraction_is_persisted_and_retrievable() -> None:
         assert job is not None
         assert invoice.status == InvoiceStatus.READY.value
         assert job.status == JobStatus.COMPLETED.value
+        citations = session.query(CitationRecord).filter_by(invoice_id=invoice_id).all()
+        assert len(citations) == 6
+        assert {citation.entity_type for citation in citations} == {
+            "field",
+            "line_item",
+        }
 
     def override_get_db() -> Generator[Session, None, None]:
         session = session_factory()
