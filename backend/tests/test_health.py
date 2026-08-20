@@ -1,5 +1,7 @@
+import json
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -39,3 +41,31 @@ def test_health_check_replaces_invalid_trace_id() -> None:
     generated_trace_id = response.headers["X-Trace-Id"]
     UUID(generated_trace_id)
     assert generated_trace_id != "not-a-uuid"
+
+
+def test_health_check_emits_structured_request_log(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    client = TestClient(create_app())
+    caplog.set_level("INFO", logger="doc_query_engine.http")
+
+    response = client.get(
+        "/health?secret=not-logged",
+        headers={"X-Trace-Id": "12345678-1234-4234-8234-123456789abc"},
+    )
+
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "doc_query_engine.http"
+    ]
+    assert response.status_code == 200
+    assert events[-1] == {
+        "duration_ms": events[-1]["duration_ms"],
+        "event": "http_request_completed",
+        "method": "GET",
+        "path": "/health",
+        "status_code": 200,
+        "trace_id": "12345678-1234-4234-8234-123456789abc",
+    }
+    assert "secret" not in events[-1]

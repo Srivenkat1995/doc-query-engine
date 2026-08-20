@@ -25,6 +25,10 @@ Every request receives an `X-Trace-Id` response header. Clients may send a
 canonical UUID in the same header to preserve correlation across services;
 missing or invalid values are replaced with a generated UUID4.
 
+The API emits JSON request events containing the event name, method, path, HTTP
+status, duration, and trace ID. Request bodies, query values, headers, file
+contents, credentials, and tokens are not included.
+
 The connectivity-ready worker can be started with:
 
 ```text
