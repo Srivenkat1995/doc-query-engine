@@ -91,6 +91,31 @@ npm run build
 GitHub Actions runs these checks and validates Compose configuration on pushes
 to `main` and pull requests.
 
+## Production Compose deployment
+
+`docker-compose.production.yml` is a production-oriented self-hosting baseline.
+It keeps PostgreSQL, Redis, the API, the worker, and the Next.js server on a
+private Compose network; only the frontend port is published. It does not
+create a public deployment or replace a managed ingress, TLS certificate,
+backup policy, secret manager, or observability platform.
+
+Create a deployment environment file outside version control with these values:
+
+- `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD`
+- `DOC_QUERY_DATABASE_URL` using the same database credentials and the
+  `postgresql+psycopg` driver
+- `DOC_QUERY_REDIS_URL` pointing at the Redis service or a managed Redis URL
+- `DOC_QUERY_CORS_ORIGINS` as a comma-separated list of trusted browser origins
+- Optional `PORT` for the published frontend port
+
+Start it with the production Compose file and verify the frontend root and
+backend `/health` endpoint through the configured ingress. Never commit the
+environment file or place credentials in image layers. Uploaded files and
+PostgreSQL/Redis data use named volumes; configure backups and retention before
+using real financial documents. For internet-facing use, put the frontend
+behind TLS and add authentication, rate limiting, malware scanning, and secret
+rotation.
+
 ## Deliberate limitations
 
 - The deterministic provider supports documented line-oriented fixtures; it is

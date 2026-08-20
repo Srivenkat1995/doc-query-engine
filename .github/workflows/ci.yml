@@ -74,3 +74,13 @@ jobs:
 
       - name: Validate Docker Compose configuration
         run: docker compose config --quiet
+
+      - name: Validate production Compose configuration
+        env:
+          POSTGRES_DB: doc_query
+          POSTGRES_USER: doc_query
+          POSTGRES_PASSWORD: ci-placeholder
+          DOC_QUERY_DATABASE_URL: postgresql+psycopg://doc_query:ci-placeholder@postgres:5432/doc_query
+          DOC_QUERY_REDIS_URL: redis://redis:6379/0
+          DOC_QUERY_CORS_ORIGINS: https://review.example.com
+        run: docker compose -f docker-compose.production.yml config --quiet

@@ -23,6 +23,26 @@ def test_health_check_returns_service_metadata() -> None:
     UUID(response.headers["X-Trace-Id"])
 
 
+def test_health_check_includes_configured_cors_origin(monkeypatch) -> None:
+    import app.main as main_module
+    from app.config import Settings
+
+    monkeypatch.setattr(
+        main_module,
+        "get_settings",
+        lambda: Settings(cors_origins="https://review.example.com"),
+    )
+    client = TestClient(main_module.create_app())
+
+    response = client.get(
+        "/health",
+        headers={"Origin": "https://review.example.com"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://review.example.com"
+
+
 def test_health_check_preserves_valid_trace_id() -> None:
     client = TestClient(create_app())
     trace_id = "12345678-1234-4234-8234-123456789abc"

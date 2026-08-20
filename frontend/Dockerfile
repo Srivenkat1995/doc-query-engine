@@ -11,4 +11,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+RUN npm run build
+
+CMD ["npm", "run", "start", "--", "--hostname", "0.0.0.0"]
