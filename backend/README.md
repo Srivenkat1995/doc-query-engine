@@ -33,6 +33,11 @@ Background task payloads carry `trace_id`, `invoice_id`, and `job_id`. The worke
 validates these fields and includes them in its JSON task event. Upload dispatch
 is introduced separately from this propagation contract.
 
+The local storage adapter writes documents below `DOC_QUERY_STORAGE_ROOT`,
+which defaults to `./uploads`. Writes are atomic, reads return bytes, deletes
+are idempotent, and absolute or path-traversal keys are rejected. The upload API
+will adopt this adapter in a later commit.
+
 The connectivity-ready worker can be started with:
 
 ```text

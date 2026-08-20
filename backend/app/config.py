@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str = "sqlite:///./data/doc_query.db"
     redis_url: str = "redis://localhost:6379/0"
+    storage_root: str = "./uploads"
 
     model_config = SettingsConfigDict(
         env_file=".env",
