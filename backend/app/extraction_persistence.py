@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
@@ -100,6 +102,11 @@ def persist_extraction(
         [record.id for record in line_item_records],
     )
     db.add(ExtractionRecord(invoice_id=invoice_id, raw_text=extraction.raw_text))
+    field_values = {field.name: field.value for field in extraction.fields}
+    invoice.vendor = field_values.get("vendor")
+    total_value = field_values.get("total")
+    invoice.total = float(Decimal(total_value)) if total_value else None
+    invoice.due_date = field_values.get("due_date")
     chunks = chunk_text(extraction.raw_text)
     vectors = get_embedding_provider().embed([chunk.content for chunk in chunks])
     for chunk, vector in zip(chunks, vectors):

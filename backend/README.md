@@ -101,6 +101,10 @@ ranking is introduced separately.
 prioritize invoices with field flags or review issues, and `failed=true` to show
 processing failures.
 
+Structured filters include `vendor`, `total_min`, `total_max`,
+`due_date_before`, `due_date_after`, and `status`. These filters execute in the
+database before any future semantic ranking.
+
 `DeterministicExtractionProvider` parses the line-oriented fixtures in
 `tests/fixtures/` without external credentials. It supports clean and deliberately
 messy examples, including low-confidence fields and unreconciled printed totals.

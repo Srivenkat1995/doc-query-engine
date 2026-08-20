@@ -32,6 +32,9 @@ def test_dashboard_lists_and_filters_exception_counts() -> None:
                     original_filename="review.pdf",
                     mime_type="application/pdf",
                     size_bytes=20,
+                    vendor="Acme",
+                    total=1250,
+                    due_date="2026-09-30",
                 ),
             ]
         )
@@ -58,6 +61,9 @@ def test_dashboard_lists_and_filters_exception_counts() -> None:
         client = TestClient(app)
         all_response = client.get("/invoices")
         review_response = client.get("/invoices?needs_review=true")
+        filtered_response = client.get(
+            "/invoices?vendor=acme&total_min=1000&due_date_before=2026-10-01"
+        )
     finally:
         app.dependency_overrides.clear()
         Base.metadata.drop_all(engine)
@@ -67,3 +73,5 @@ def test_dashboard_lists_and_filters_exception_counts() -> None:
     assert all_response.json()["total_count"] == 2
     assert review_response.json()["total_count"] == 1
     assert review_response.json()["invoices"][0]["id"] == "review-invoice"
+    assert filtered_response.json()["total_count"] == 1
+    assert filtered_response.json()["invoices"][0]["vendor"] == "Acme"

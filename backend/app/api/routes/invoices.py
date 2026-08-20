@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 from uuid import uuid4
 
 from fastapi import (
@@ -51,11 +54,32 @@ router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 @router.get("", response_model=DashboardResponse)
 def list_invoices(
+    vendor: Optional[str] = Query(default=None, min_length=1),
+    total_min: Optional[float] = Query(default=None, ge=0),
+    total_max: Optional[float] = Query(default=None, ge=0),
+    due_date_before: Optional[str] = Query(default=None),
+    due_date_after: Optional[str] = Query(default=None),
+    invoice_status: Optional[str] = Query(default=None, alias="status"),
     needs_review: bool = Query(default=False),
     failed: bool = Query(default=False),
     db: Session = Depends(get_db),
 ) -> DashboardResponse:
-    invoices = db.scalars(select(Invoice).order_by(Invoice.created_at.desc())).all()
+    query = select(Invoice).order_by(Invoice.created_at.desc())
+    if vendor:
+        query = query.where(Invoice.vendor.ilike(f"%{vendor}%"))
+    if total_min is not None:
+        query = query.where(Invoice.total >= total_min)
+    if total_max is not None:
+        query = query.where(Invoice.total <= total_max)
+    if due_date_before:
+        query = query.where(Invoice.due_date <= due_date_before)
+    if due_date_after:
+        query = query.where(Invoice.due_date >= due_date_after)
+    if invoice_status:
+        query = query.where(Invoice.status == invoice_status)
+    if failed:
+        query = query.where(Invoice.status == "failed")
+    invoices = db.scalars(query).all()
     summaries = []
     for invoice in invoices:
         flags = db.scalar(
@@ -71,14 +95,15 @@ def list_invoices(
         ) or 0
         if needs_review and flags == 0 and issue_count == 0:
             continue
-        if failed and invoice.status != "failed":
-            continue
         summaries.append(
             InvoiceSummary(
                 id=invoice.id,
                 original_filename=invoice.original_filename,
                 status=invoice.status,
                 size_bytes=invoice.size_bytes,
+                vendor=invoice.vendor,
+                total=invoice.total,
+                due_date=invoice.due_date,
                 flag_count=flags,
                 issue_count=issue_count,
                 created_at=invoice.created_at,

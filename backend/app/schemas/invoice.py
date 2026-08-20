@@ -13,6 +13,9 @@ class InvoiceCreate(BaseModel):
     mime_type: str = Field(min_length=1, max_length=100)
     size_bytes: int = Field(ge=0)
     storage_key: Optional[str] = Field(default=None, max_length=512)
+    vendor: Optional[str] = Field(default=None, max_length=255)
+    total: Optional[float] = Field(default=None, ge=0)
+    due_date: Optional[str] = Field(default=None, max_length=32)
 
 
 class InvoiceResponse(BaseModel):
@@ -23,6 +26,9 @@ class InvoiceResponse(BaseModel):
     mime_type: str
     size_bytes: int
     storage_key: Optional[str]
+    vendor: Optional[str]
+    total: Optional[float]
+    due_date: Optional[str]
     status: InvoiceStatus
     failure_reason: Optional[str]
     created_at: datetime

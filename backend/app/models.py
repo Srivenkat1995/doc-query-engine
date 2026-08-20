@@ -48,6 +48,9 @@ class Invoice(Base):
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     storage_key: Mapped[Optional[str]] = mapped_column(String(512))
+    vendor: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    total: Mapped[Optional[float]] = mapped_column(Float, index=True)
+    due_date: Mapped[Optional[str]] = mapped_column(String(32), index=True)
     status: Mapped[str] = mapped_column(
         String(32), default=InvoiceStatus.UPLOADED.value, nullable=False, index=True
     )
