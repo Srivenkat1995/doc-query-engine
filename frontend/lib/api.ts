@@ -17,6 +17,28 @@ export type InvoiceResponse = {
   updated_at: string;
 };
 
+export type JobResponse = {
+  id: string;
+  invoice_id: string;
+  idempotency_key: string;
+  status: "queued" | "processing" | "completed" | "failed";
+  attempt_count: number;
+  failure_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProcessingStatusResponse = {
+  invoice_id: string;
+  job_id: string;
+  invoice_status: "uploaded" | "processing" | "ready" | "needs_review" | "failed";
+  job_status: JobResponse["status"];
+  attempt_count: number;
+  failure_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 export const SUPPORTED_UPLOAD_TYPES = [
   "application/pdf",
@@ -56,4 +78,47 @@ export async function uploadInvoice(file: File): Promise<InvoiceResponse> {
   }
 
   return response.json() as Promise<InvoiceResponse>;
+}
+
+async function parseError(response: Response, fallback: string): Promise<Error> {
+  const body = (await response.json().catch(() => null)) as {
+    detail?: { message?: string };
+  } | null;
+  return new Error(body?.detail?.message ?? fallback);
+}
+
+export async function createProcessingJob(
+  invoiceId: string,
+  idempotencyKey: string,
+): Promise<JobResponse> {
+  const response = await fetch(`${apiBaseUrl}/invoices/${invoiceId}/jobs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idempotency_key: idempotencyKey }),
+  });
+  if (!response.ok) throw await parseError(response, "The processing job could not be created.");
+  return response.json() as Promise<JobResponse>;
+}
+
+export async function dispatchProcessingJob(
+  invoiceId: string,
+  jobId: string,
+): Promise<void> {
+  const response = await fetch(
+    `${apiBaseUrl}/invoices/${invoiceId}/jobs/${jobId}/dispatch`,
+    { method: "POST" },
+  );
+  if (!response.ok) throw await parseError(response, "The processing job could not be started.");
+}
+
+export async function getProcessingStatus(
+  invoiceId: string,
+  jobId: string,
+): Promise<ProcessingStatusResponse> {
+  const response = await fetch(
+    `${apiBaseUrl}/invoices/${invoiceId}/jobs/${jobId}/status`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) throw await parseError(response, "The processing status could not be read.");
+  return response.json() as Promise<ProcessingStatusResponse>;
 }

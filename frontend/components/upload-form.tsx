@@ -3,11 +3,17 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 
 import {
+  createProcessingJob,
+  dispatchProcessingJob,
+  getProcessingStatus,
   MAX_UPLOAD_BYTES,
   SUPPORTED_UPLOAD_TYPES,
   uploadInvoice,
   type InvoiceResponse,
 } from "../lib/api";
+
+const MAX_STATUS_POLLS = 30;
+const STATUS_POLL_INTERVAL_MS = 2000;
 
 const formatBytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 
@@ -19,12 +25,14 @@ export function UploadForm() {
     null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
 
   const selectFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
     setSelectedFile(file);
     setUploadedInvoice(null);
     setRequestError(null);
+    setProcessingMessage(null);
 
     if (!file) {
       setValidationError(null);
@@ -45,9 +53,37 @@ export function UploadForm() {
     setRequestError(null);
     setUploadedInvoice(null);
     try {
-      setUploadedInvoice(await uploadInvoice(selectedFile));
+      const invoice = await uploadInvoice(selectedFile);
+      setUploadedInvoice(invoice);
       setSelectedFile(null);
       event.currentTarget.reset();
+      setProcessingMessage("Upload complete. Preparing processing…");
+      const job = await createProcessingJob(invoice.id, `upload-${invoice.id}`);
+      await dispatchProcessingJob(invoice.id, job.id);
+
+      for (let poll = 0; poll < MAX_STATUS_POLLS; poll += 1) {
+        const processing = await getProcessingStatus(invoice.id, job.id);
+        if (processing.job_status === "completed") {
+          setProcessingMessage("Processing complete. Your invoice is ready to review.");
+          return;
+        }
+        if (processing.job_status === "failed" || processing.invoice_status === "failed") {
+          throw new Error(
+            processing.failure_reason ?? "Processing failed. You can retry this invoice.",
+          );
+        }
+        if (processing.invoice_status === "needs_review") {
+          setProcessingMessage("Processing complete. This invoice needs your review.");
+          return;
+        }
+        setProcessingMessage(
+          processing.job_status === "queued"
+            ? "Queued for processing…"
+            : "Processing invoice…",
+        );
+        await new Promise((resolve) => setTimeout(resolve, STATUS_POLL_INTERVAL_MS));
+      }
+      throw new Error("Processing is taking longer than expected. You can retry shortly.");
     } catch (error: unknown) {
       setRequestError(
         error instanceof Error ? error.message : "The invoice could not be uploaded.",
@@ -102,10 +138,9 @@ export function UploadForm() {
             {requestError}
           </p>
         )}
-        {uploadedInvoice && (
+        {uploadedInvoice && processingMessage && (
           <p className="mt-3 text-sm text-emerald-700" role="status">
-            Uploaded {uploadedInvoice.original_filename}. Processing will begin
-            in the next step.
+            Uploaded {uploadedInvoice.original_filename}. {processingMessage}
           </p>
         )}
 
