@@ -59,6 +59,10 @@ and logs the task. Transient failures retry at most three times with exponential
 backoff; permanent failures and exhausted retries mark the job `failed` with a
 reason. Extraction is introduced separately.
 
+`GET /invoices/{invoice_id}/jobs/{job_id}/status` returns the invoice status,
+job status, attempt count, failure reason, and timestamps. It verifies that the
+job belongs to the requested invoice.
+
 The connectivity-ready worker can be started with:
 
 ```text

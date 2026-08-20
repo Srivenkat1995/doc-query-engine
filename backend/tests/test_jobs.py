@@ -95,6 +95,44 @@ def test_processing_job_requires_existing_invoice(client: TestClient) -> None:
     assert response.json() == {"detail": "Invoice not found"}
 
 
+def test_processing_status_returns_invoice_and_job_state(client: TestClient) -> None:
+    invoice_id = create_invoice(client)
+    job_response = client.post(
+        f"/invoices/{invoice_id}/jobs",
+        json={"idempotency_key": "status-1"},
+    )
+    job_id = job_response.json()["id"]
+
+    response = client.get(f"/invoices/{invoice_id}/jobs/{job_id}/status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["invoice_id"] == invoice_id
+    assert body["job_id"] == job_id
+    assert body["invoice_status"] == "uploaded"
+    assert body["job_status"] == "queued"
+    assert body["attempt_count"] == 0
+    assert body["failure_reason"] is None
+    assert body["created_at"] == body["updated_at"]
+
+
+def test_processing_status_rejects_job_from_another_invoice(
+    client: TestClient,
+) -> None:
+    first_invoice_id = create_invoice(client)
+    second_invoice_id = create_invoice(client)
+    job_response = client.post(
+        f"/invoices/{first_invoice_id}/jobs",
+        json={"idempotency_key": "status-owner-1"},
+    )
+    job_id = job_response.json()["id"]
+
+    response = client.get(f"/invoices/{second_invoice_id}/jobs/{job_id}/status")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Processing job not found"}
+
+
 def test_dispatch_sends_correlated_payload_to_celery(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

@@ -19,6 +19,7 @@ from app.models import Invoice, ProcessingJob
 from app.schemas.dispatch import DispatchResponse
 from app.schemas.invoice import InvoiceCreate, InvoiceResponse
 from app.schemas.job import JobCreate, JobResponse
+from app.schemas.status import ProcessingStatusResponse
 from app.storage import Storage, get_storage
 from app.task_context import ProcessingTaskPayload, TaskContext
 from app.tracing import get_trace_id
@@ -204,6 +205,34 @@ def dispatch_processing_job(
         invoice_id=invoice_id,
         accepted=True,
         trace_id=trace_id,
+    )
+
+
+@router.get(
+    "/{invoice_id}/jobs/{job_id}/status",
+    response_model=ProcessingStatusResponse,
+)
+def get_processing_status(
+    invoice_id: str,
+    job_id: str,
+    db: Session = Depends(get_db),
+) -> ProcessingStatusResponse:
+    invoice = db.get(Invoice, invoice_id)
+    job = db.get(ProcessingJob, job_id)
+    if invoice is None or job is None or job.invoice_id != invoice_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Processing job not found",
+        )
+    return ProcessingStatusResponse(
+        invoice_id=invoice.id,
+        job_id=job.id,
+        invoice_status=invoice.status,
+        job_status=job.status,
+        attempt_count=job.attempt_count,
+        failure_reason=job.failure_reason,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
     )
 
 
