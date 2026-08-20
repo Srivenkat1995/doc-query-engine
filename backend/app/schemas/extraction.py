@@ -15,6 +15,7 @@ class ExtractedFieldResponse(BaseModel):
     name: str
     value: Optional[str]
     confidence: float
+    confidence_signals: Optional[dict]
     citation: Optional[CitationResponse]
 
 

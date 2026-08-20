@@ -36,7 +36,11 @@ def test_messy_fixture_preserves_low_confidence_and_total() -> None:
 
     vendor = next(field for field in result.fields if field.name == "vendor")
     total = next(field for field in result.fields if field.name == "total")
-    assert vendor.confidence == 0.62
+    assert vendor.confidence == 0.672
+    assert vendor.confidence_signals is not None
+    assert vendor.confidence_signals.model_score == 0.62
+    assert vendor.confidence_signals.format_valid is True
+    assert vendor.confidence_signals.consistency_score == 0.5
     assert total.value == "300.00"
     assert result.raw_text.startswith("VENDOR: Acme Corporation")
 

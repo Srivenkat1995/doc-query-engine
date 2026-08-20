@@ -286,6 +286,7 @@ def get_extraction(
                 name=field.name,
                 value=field.value,
                 confidence=field.confidence,
+                confidence_signals=field.confidence_signals,
                 citation=citation(field),
             )
             for field in fields

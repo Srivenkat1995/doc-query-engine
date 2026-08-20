@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Dict, List
 
+from app.confidence import compose_confidence
 from app.extraction import Citation, ExtractedField, InvoiceExtraction, LineItem
 
 
@@ -57,18 +58,48 @@ class DeterministicExtractionProvider:
                 f"Fixture is missing required fields: {', '.join(missing or ['items'])}"
             )
 
-        fields = [
-            ExtractedField(
-                name=field_name,
-                value=values[key],
-                confidence=confidence.get(key, 0.99),
-                citation=Citation(page=1, source_text=f"{key.upper()}: {values[key]}"),
+        consistency_score = self._consistency_score(values["total"], line_items)
+        fields = []
+        for key, field_name in required_fields.items():
+            signals = compose_confidence(
+                confidence.get(key, 0.99),
+                format_valid=self._format_valid(key, values[key]),
+                consistency_score=consistency_score,
             )
-            for key, field_name in required_fields.items()
-        ]
+            fields.append(
+                ExtractedField(
+                    name=field_name,
+                    value=values[key],
+                    confidence=signals.final_score,
+                    citation=Citation(
+                        page=1,
+                        source_text=f"{key.upper()}: {values[key]}",
+                    ),
+                    confidence_signals=signals,
+                )
+            )
         Decimal(values["total"])  # Fail early on malformed money in a fixture.
         return InvoiceExtraction(
             fields=fields,
             line_items=line_items,
             raw_text=raw_text,
         )
+
+    @staticmethod
+    def _format_valid(key: str, value: str) -> bool:
+        if not value:
+            return False
+        if key == "total":
+            try:
+                Decimal(value)
+            except Exception:
+                return False
+        return True
+
+    @staticmethod
+    def _consistency_score(total: str, line_items: List[LineItem]) -> float:
+        try:
+            item_total = sum(Decimal(item.amount) for item in line_items)
+            return 1.0 if Decimal(total) == item_total else 0.5
+        except Exception:
+            return 0.0

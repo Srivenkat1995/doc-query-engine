@@ -53,6 +53,11 @@ def persist_extraction(
                 name=field.name,
                 value=field.value,
                 confidence=field.confidence,
+                confidence_signals=(
+                    field.confidence_signals.to_dict()
+                    if field.confidence_signals
+                    else None
+                ),
                 citation_page=page,
                 citation_text=source_text,
                 bounding_box=bounding_box,

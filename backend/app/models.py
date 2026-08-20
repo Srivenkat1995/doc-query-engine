@@ -113,6 +113,7 @@ class ExtractedFieldRecord(Base):
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     value: Mapped[Optional[str]] = mapped_column(Text)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    confidence_signals: Mapped[Optional[dict]] = mapped_column(JSON)
     citation_page: Mapped[Optional[int]] = mapped_column(Integer)
     citation_text: Mapped[Optional[str]] = mapped_column(Text)
     bounding_box: Mapped[Optional[list[float]]] = mapped_column(JSON)

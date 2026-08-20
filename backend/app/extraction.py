@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Protocol, Sequence, Tuple, runtime_checkable
 
+from app.confidence import ConfidenceSignals
+
 
 @dataclass(frozen=True)
 class Citation:
@@ -21,6 +23,7 @@ class ExtractedField:
     value: Optional[str]
     confidence: float
     citation: Optional[Citation] = None
+    confidence_signals: Optional[ConfidenceSignals] = None
 
 
 @dataclass(frozen=True)
