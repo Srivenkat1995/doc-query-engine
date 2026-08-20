@@ -80,6 +80,10 @@ Arithmetic reconciliation now creates a `total_mismatch` issue containing the
 printed total, calculated line-item total, and signed difference. Neither total
 is replaced. Issues are returned from the extraction endpoint for review.
 
+Extraction failures receive exactly one optional repair attempt. If repair is
+unavailable or fails, raw source text is preserved, a `schema_repair_failed`
+issue is stored, and the invoice moves to `needs_review`.
+
 `DeterministicExtractionProvider` parses the line-oriented fixtures in
 `tests/fixtures/` without external credentials. It supports clean and deliberately
 messy examples, including low-confidence fields and unreconciled printed totals.

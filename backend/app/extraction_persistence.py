@@ -92,6 +92,10 @@ def persist_extraction(
                 details=issue.details,
             )
         )
-    invoice.status = InvoiceStatus.READY.value
+    invoice.status = (
+        InvoiceStatus.NEEDS_REVIEW.value
+        if any(issue.code == "schema_repair_failed" for issue in extraction.issues)
+        else InvoiceStatus.READY.value
+    )
     job.status = JobStatus.COMPLETED.value
     job.failure_reason = None

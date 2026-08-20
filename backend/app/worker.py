@@ -11,6 +11,7 @@ from app.deterministic_extraction import DeterministicExtractionProvider
 from app.extraction_persistence import persist_extraction
 from app.models import JobStatus, ProcessingJob
 from app.observability import log_worker_task
+from app.repair import extract_with_one_repair
 from app.storage import get_storage
 from app.task_context import ProcessingTaskPayload, TaskContext
 
@@ -95,10 +96,11 @@ def execute_processing(payload: ProcessingTaskPayload) -> dict[str, str]:
     db = SessionLocal()
     try:
         content = get_storage().get(payload.storage_key)
-        try:
-            extraction = DeterministicExtractionProvider().extract(content, "")
-        except (UnicodeDecodeError, ValueError) as error:
-            raise PermanentProcessingError(str(error)) from error
+        extraction = extract_with_one_repair(
+            DeterministicExtractionProvider(),
+            content,
+            "",
+        )
         persist_extraction(
             db,
             payload.context.invoice_id,
