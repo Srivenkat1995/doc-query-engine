@@ -55,7 +55,9 @@ durable identity only—Celery dispatch is introduced separately.
 `POST /invoices/{invoice_id}/jobs/{job_id}/dispatch` sends the job to the
 `documents` Celery queue and returns HTTP 202 with the trace ID. Its payload
 contains the invoice ID, job ID, trace ID, and storage key. The worker accepts
-and logs the task; extraction is introduced separately.
+and logs the task. Transient failures retry at most three times with exponential
+backoff; permanent failures and exhausted retries mark the job `failed` with a
+reason. Extraction is introduced separately.
 
 The connectivity-ready worker can be started with:
 
